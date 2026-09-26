@@ -13,6 +13,7 @@
     --accent-red-hover: #a80d26;
     --accent-gold: #bd9b4e;
     --surface: #ffffff;
+    --ease-made: cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   body {
@@ -24,7 +25,7 @@
   }
 }
 
-/* Sahaay + Prevayu Brutalist Utility Classes */
+/* Typography Scale */
 .font-display {
   font-family: var(--font-display), Georgia, serif;
 }
@@ -37,17 +38,22 @@
   font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
-/* Dense Brutalist Card */
+/* Dense Brutalist Card with Smooth Hover Lift */
 .brutal-card {
   border: 2px solid var(--ink);
   background-color: var(--surface);
   box-shadow: 3px 3px 0px var(--ink);
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  transition: transform 0.2s var(--ease-made), box-shadow 0.2s var(--ease-made), border-color 0.2s ease;
 }
 
 .brutal-card:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0px var(--ink);
+  transform: translate(-1.5px, -1.5px);
+  box-shadow: 4.5px 4.5px 0px var(--ink);
+}
+
+.brutal-card:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1.5px 1.5px 0px var(--ink);
 }
 
 .brutal-card-flat {
@@ -55,7 +61,7 @@
   background-color: var(--surface);
 }
 
-/* Brutalist Buttons */
+/* Brutalist Buttons with Tactile Press Feedback */
 .brutal-btn {
   display: inline-flex;
   align-items: center;
@@ -72,7 +78,7 @@
   letter-spacing: 0.05em;
   box-shadow: 2px 2px 0px var(--ink);
   cursor: pointer;
-  transition: background-color 0.15s ease, transform 0.1s ease, box-shadow 0.1s ease;
+  transition: background-color 0.15s ease, transform 0.15s var(--ease-made), box-shadow 0.15s var(--ease-made);
 }
 
 .brutal-btn:hover {
@@ -82,8 +88,8 @@
 }
 
 .brutal-btn:active {
-  transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0px var(--ink);
+  transform: translate(1.5px, 1.5px);
+  box-shadow: 0.5px 0.5px 0px var(--ink);
 }
 
 .brutal-btn-red {
@@ -102,13 +108,18 @@
   letter-spacing: 0.05em;
   box-shadow: 2px 2px 0px var(--ink);
   cursor: pointer;
-  transition: background-color 0.15s ease, transform 0.1s ease, box-shadow 0.1s ease;
+  transition: background-color 0.15s ease, transform 0.15s var(--ease-made), box-shadow 0.15s var(--ease-made);
 }
 
 .brutal-btn-red:hover {
   background-color: var(--accent-red-hover);
   transform: translate(-1px, -1px);
   box-shadow: 3px 3px 0px var(--ink);
+}
+
+.brutal-btn-red:active {
+  transform: translate(1.5px, 1.5px);
+  box-shadow: 0.5px 0.5px 0px var(--ink);
 }
 
 .brutal-btn-outline {
@@ -127,13 +138,18 @@
   letter-spacing: 0.05em;
   box-shadow: 2px 2px 0px var(--ink);
   cursor: pointer;
-  transition: background-color 0.15s ease, transform 0.1s ease, box-shadow 0.1s ease;
+  transition: background-color 0.15s ease, transform 0.15s var(--ease-made), box-shadow 0.15s var(--ease-made);
 }
 
 .brutal-btn-outline:hover {
   background-color: var(--paper-dim);
   transform: translate(-1px, -1px);
   box-shadow: 3px 3px 0px var(--ink);
+}
+
+.brutal-btn-outline:active {
+  transform: translate(1.5px, 1.5px);
+  box-shadow: 0.5px 0.5px 0px var(--ink);
 }
 
 /* Micro Technical Label */
@@ -143,6 +159,32 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+}
+
+/* Micro Animations */
+@keyframes checkmarkPop {
+  0% { transform: scale(0.85); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+.animate-check-pop {
+  animation: checkmarkPop 0.25s var(--ease-made) forwards;
+}
+
+@keyframes fadeInStagger {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fadeInStagger 0.3s var(--ease-made) forwards;
 }
 
 /* Custom Scrollbar for dense lists */

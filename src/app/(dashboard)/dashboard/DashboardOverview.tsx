@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { Wordmark } from "@/components/Wordmark";
 import { PriorityBadge, StageBadge, CategoryBadge, RegionBadge } from "@/components/StatusBadge";
+import { useToast } from "@/components/Toast";
 import type { Playbook, Client, NextAction, Capture, ActionStatus } from "@/lib/data/types";
 import { toggleActionStatusHandler } from "@/app/(dashboard)/actions/actions";
 
@@ -44,6 +45,7 @@ export function DashboardOverview({
   actions: initialActions,
   captures,
 }: DashboardOverviewProps) {
+  const { showToast } = useToast();
   const [actions, setActions] = useState<NextAction[]>(initialActions);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -53,6 +55,11 @@ export function DashboardOverview({
     setActions((prev) =>
       prev.map((a) => (a.id === action.id ? { ...a, status: nextStatus } : a))
     );
+
+    if (nextStatus === "done") {
+      showToast(`✓ Completed task: "${action.title.slice(0, 30)}..."`, "success");
+    }
+
     startTransition(async () => {
       await toggleActionStatusHandler(action.id, nextStatus);
     });

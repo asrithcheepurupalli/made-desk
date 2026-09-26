@@ -12,6 +12,7 @@ import {
   Layers,
   ArrowUpRight,
   Loader2,
+  Check,
 } from "lucide-react";
 import {
   createActionHandler,
@@ -20,6 +21,7 @@ import {
   deleteActionHandler,
 } from "./actions";
 import { PriorityBadge, StatusBadge } from "@/components/StatusBadge";
+import { useToast } from "@/components/Toast";
 import type { NextAction, ActionPriority, ActionStatus, Capture } from "@/lib/data/types";
 
 interface ActionsBoardProps {
@@ -28,6 +30,7 @@ interface ActionsBoardProps {
 }
 
 export function ActionsBoard({ initialActions, captures }: ActionsBoardProps) {
+  const { showToast } = useToast();
   const [actions, setActions] = useState<NextAction[]>(initialActions);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
@@ -37,7 +40,6 @@ export function ActionsBoard({ initialActions, captures }: ActionsBoardProps) {
   const [isAdding, startAdding] = useTransition();
   const [isMutating, startMutating] = useTransition();
 
-  // Keep local state in sync when server props revalidate
   React.useEffect(() => {
     setActions(initialActions);
   }, [initialActions]);
@@ -53,6 +55,7 @@ export function ActionsBoard({ initialActions, captures }: ActionsBoardProps) {
       formData.append("priority", newPriority);
 
       await createActionHandler(formData);
+      showToast(`✓ Added task: "${newTitle.slice(0, 35)}..."`, "success");
       setNewTitle("");
       setNewDesc("");
     });
@@ -61,10 +64,13 @@ export function ActionsBoard({ initialActions, captures }: ActionsBoardProps) {
   const handleToggleDone = (action: NextAction) => {
     const nextStatus: ActionStatus = action.status === "done" ? "todo" : "done";
 
-    // Optimistic update
     setActions((prev) =>
       prev.map((a) => (a.id === action.id ? { ...a, status: nextStatus } : a))
     );
+
+    if (nextStatus === "done") {
+      showToast(`✓ Completed: "${action.title.slice(0, 30)}..."`, "success");
+    }
 
     startMutating(async () => {
       await toggleActionStatusHandler(action.id, nextStatus);
@@ -76,13 +82,17 @@ export function ActionsBoard({ initialActions, captures }: ActionsBoardProps) {
       prev.map((a) => (a.id === id ? { ...a, status: newStatus } : a))
     );
 
+    showToast(`Status updated to ${newStatus.toUpperCase()}`, "info");
+
     startMutating(async () => {
       await toggleActionStatusHandler(id, newStatus);
     });
   };
 
   const handleDelete = (id: string) => {
+    const act = actions.find((a) => a.id === id);
     setActions((prev) => prev.filter((a) => a.id !== id));
+    showToast(`Deleted task: "${act?.title.slice(0, 30)}..."`, "info");
 
     startMutating(async () => {
       await deleteActionHandler(id);
@@ -98,7 +108,7 @@ export function ActionsBoard({ initialActions, captures }: ActionsBoardProps) {
   const captureMap = new Map(captures.map((c) => [c.id, c]));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-up">
       {/* Quick Add Action Card */}
       <div className="brutal-card p-5 bg-white">
         <form onSubmit={handleCreate} className="space-y-3">
@@ -113,8 +123,8 @@ export function ActionsBoard({ initialActions, captures }: ActionsBoardProps) {
               required
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="What needs to be done next? (e.g., Draft UAE outreach audit PDF template)"
-              className="md:col-span-6 px-3 py-2 bg-[#f6f3ee] border-2 border-[#16130f] text-xs font-sans focus:outline-hidden focus:bg-white focus:ring-2 focus:ring-[#c8102e]"
+              placeholder="What needs to be done next? (e.g., Send interactive prototype link)"
+              className="md:col-span-6 px-3 py-2 bg-[#f6f3ee] border-2 border-[#16130f] text-xs font-sans focus:outline-hidden focus:bg-white focus:ring-2 focus:ring-[#c8102e] transition-all"
               disabled={isAdding}
             />
 
@@ -123,14 +133,14 @@ export function ActionsBoard({ initialActions, captures }: ActionsBoardProps) {
               value={newDesc}
               onChange={(e) => setNewDesc(e.target.value)}
               placeholder="Context or notes (optional)..."
-              className="md:col-span-3 px-3 py-2 bg-[#f6f3ee] border-2 border-[#16130f] text-xs font-sans focus:outline-hidden focus:bg-white focus:ring-2 focus:ring-[#c8102e]"
+              className="md:col-span-3 px-3 py-2 bg-[#f6f3ee] border-2 border-[#16130f] text-xs font-sans focus:outline-hidden focus:bg-white focus:ring-2 focus:ring-[#c8102e] transition-all"
               disabled={isAdding}
             />
 
             <select
               value={newPriority}
               onChange={(e) => setNewPriority(e.target.value as ActionPriority)}
-              className="md:col-span-2 px-2 py-2 bg-[#f6f3ee] border-2 border-[#16130f] text-xs font-mono uppercase font-bold focus:outline-hidden focus:bg-white"
+              className="md:col-span-2 px-2 py-2 bg-[#f6f3ee] border-2 border-[#16130f] text-xs font-mono uppercase font-bold focus:outline-hidden focus:bg-white transition-all"
               disabled={isAdding}
             >
               <option value="urgent">Urgent</option>
@@ -164,7 +174,7 @@ export function ActionsBoard({ initialActions, captures }: ActionsBoardProps) {
                 onClick={() => setFilterStatus(st)}
                 className={`label px-2.5 py-1 border transition-all ${
                   filterStatus === st
-                    ? "bg-[#16130f] text-white border-[#16130f]"
+                    ? "bg-[#16130f] text-white border-[#16130f] shadow-[2px_2px_0px_#c8102e]"
                     : "bg-[#f6f3ee] text-[#16130f] border-[#16130f] hover:bg-[#ede8df]"
                 }`}
               >
@@ -218,7 +228,7 @@ export function ActionsBoard({ initialActions, captures }: ActionsBoardProps) {
                 className={`border-2 border-[#16130f] p-4 transition-all bg-white flex flex-col md:flex-row md:items-center justify-between gap-4 ${
                   isDone
                     ? "bg-[#f6f3ee] opacity-75 shadow-none"
-                    : "shadow-[3px_3px_0px_#16130f]"
+                    : "shadow-[3px_3px_0px_#16130f] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[4px_4px_0px_#16130f]"
                 }`}
               >
                 {/* Left checkbox & text */}
@@ -226,11 +236,11 @@ export function ActionsBoard({ initialActions, captures }: ActionsBoardProps) {
                   <button
                     type="button"
                     onClick={() => handleToggleDone(action)}
-                    className="mt-0.5 text-[#16130f] hover:text-[#c8102e] transition-colors"
+                    className="mt-0.5 text-[#16130f] hover:text-[#c8102e] transition-transform active:scale-90"
                   >
                     {isDone ? (
-                      <div className="w-5 h-5 bg-[#16130f] text-white flex items-center justify-center border border-[#16130f]">
-                        ✓
+                      <div className="w-5 h-5 bg-[#16130f] text-white flex items-center justify-center border border-[#16130f] animate-check-pop">
+                        <Check className="w-3.5 h-3.5 text-[#25d366]" />
                       </div>
                     ) : (
                       <Square className="w-5 h-5" />
@@ -240,7 +250,7 @@ export function ActionsBoard({ initialActions, captures }: ActionsBoardProps) {
                   <div className="space-y-1 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span
-                        className={`font-sans text-sm font-bold ${
+                        className={`font-sans text-sm font-bold transition-all ${
                           isDone
                             ? "line-through text-[#7c7770]"
                             : "text-[#16130f]"
@@ -276,7 +286,7 @@ export function ActionsBoard({ initialActions, captures }: ActionsBoardProps) {
                     onChange={(e) =>
                       handleStatusChange(action.id, e.target.value as ActionStatus)
                     }
-                    className="label px-2 py-1 bg-[#f6f3ee] border border-[#16130f] text-[#16130f] focus:outline-hidden"
+                    className="label px-2 py-1 bg-[#f6f3ee] border border-[#16130f] text-[#16130f] focus:outline-hidden transition-colors hover:bg-white"
                   >
                     <option value="todo">TO DO</option>
                     <option value="in_progress">IN PROGRESS</option>
@@ -287,7 +297,7 @@ export function ActionsBoard({ initialActions, captures }: ActionsBoardProps) {
                   <button
                     type="button"
                     onClick={() => handleDelete(action.id)}
-                    className="p-1.5 text-[#7c7770] hover:text-[#c8102e] hover:bg-[#fbe8eb] border border-transparent hover:border-[#c8102e] transition-all"
+                    className="p-1.5 text-[#7c7770] hover:text-[#c8102e] hover:bg-[#fbe8eb] border border-transparent hover:border-[#c8102e] transition-all active:scale-90"
                     title="Delete action"
                   >
                     <Trash2 className="w-4 h-4" />

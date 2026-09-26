@@ -22,10 +22,12 @@ import {
   Maximize2,
 } from "lucide-react";
 import { promoteCaptureToPlaybookAction, deleteCaptureAction } from "./actions";
+import { useToast } from "@/components/Toast";
 import type { Capture, SourceType } from "@/lib/data/types";
 
 export function CaptureCard({ capture }: { capture: Capture }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [showRaw, setShowRaw] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isPromoting, startPromote] = useTransition();
@@ -49,7 +51,9 @@ export function CaptureCard({ capture }: { capture: Capture }) {
       const res = await promoteCaptureToPlaybookAction(capture.id);
       if (res.error) {
         setPromoteError(res.error);
+        showToast(res.error, "error");
       } else if (res.success && res.slug) {
+        showToast("✓ Promoted capture to Playbook SOP", "success");
         window.location.href = `/playbooks/${res.slug}`;
       }
     });
@@ -59,6 +63,7 @@ export function CaptureCard({ capture }: { capture: Capture }) {
     if (confirm("Are you sure you want to delete this capture?")) {
       startDelete(async () => {
         await deleteCaptureAction(capture.id);
+        showToast("Capture deleted", "info");
       });
     }
   };

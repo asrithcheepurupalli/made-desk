@@ -30,6 +30,7 @@ import {
   type AssistantSource,
 } from "./actions";
 import { exportActionPlanPDF } from "@/lib/export/printDoc";
+import { useToast } from "@/components/Toast";
 
 interface Message {
   id: string;
@@ -50,6 +51,7 @@ interface ChatWindowProps {
 
 export function ChatWindow({ initialSuggestions = [] }: ChatWindowProps) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -121,6 +123,7 @@ export function ChatWindow({ initialSuggestions = [] }: ChatWindowProps) {
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
+    showToast("✓ Copied response to clipboard", "success");
     setTimeout(() => setCopiedId(null), 2000);
   };
 
@@ -131,10 +134,13 @@ export function ChatWindow({ initialSuggestions = [] }: ChatWindowProps) {
     try {
       const res = await createSOPFromAssistantAction(title, msg.content);
       if (res.success && res.slug) {
+        showToast("✓ Created Playbook SOP page", "success");
         setMessages((prev) =>
           prev.map((m) => (m.id === msg.id ? { ...m, sopCreatedSlug: res.slug } : m))
         );
         router.push(`/playbooks/${res.slug}`);
+      } else if (res.error) {
+        showToast(res.error, "error");
       }
     } finally {
       setActionPendingId(null);
@@ -148,9 +154,12 @@ export function ChatWindow({ initialSuggestions = [] }: ChatWindowProps) {
     try {
       const res = await addTasksFromAssistantAction(msg.extractedTasks);
       if (res.success) {
+        showToast(`✓ Added ${res.count} tasks to Next Actions board`, "success");
         setMessages((prev) =>
           prev.map((m) => (m.id === msg.id ? { ...m, tasksAddedCount: res.count } : m))
         );
+      } else if (res.error) {
+        showToast(res.error, "error");
       }
     } finally {
       setActionPendingId(null);
@@ -159,6 +168,7 @@ export function ChatWindow({ initialSuggestions = [] }: ChatWindowProps) {
 
   const handleExportPDF = (msg: Message) => {
     const title = msg.suggestedSopTitle || (msg.queryPrompt ? `Action Plan: ${msg.queryPrompt}` : "Studio Action Plan");
+    showToast("✓ Exporting Action Plan PDF...", "info");
     exportActionPlanPDF({
       title,
       query: msg.queryPrompt || "Studio Operational Inquiry",

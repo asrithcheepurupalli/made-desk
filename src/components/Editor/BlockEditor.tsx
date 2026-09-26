@@ -25,6 +25,7 @@ import {
   Image as ImageIcon,
   ExternalLink,
 } from "lucide-react";
+import { useToast } from "@/components/Toast";
 
 export type BlockType =
   | "heading_1"
@@ -129,6 +130,7 @@ const BLOCK_TYPES: { type: BlockType; label: string; icon: any }[] = [
 ];
 
 export function BlockEditor({ initialBlocks, onSave, readOnly = false }: BlockEditorProps) {
+  const { showToast } = useToast();
   const [blocks, setBlocks] = useState<EditorBlock[]>(() => normalizeBlocks(initialBlocks));
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "unsaved">("saved");
@@ -169,9 +171,11 @@ export function BlockEditor({ initialBlocks, onSave, readOnly = false }: BlockEd
     try {
       await onSave(blocks);
       setSaveStatus("saved");
+      showToast("✓ Playbook saved successfully", "success");
     } catch (err) {
       console.error("Manual save failed:", err);
       setSaveStatus("unsaved");
+      showToast("Failed to save playbook", "error");
     }
   };
 
@@ -250,6 +254,7 @@ export function BlockEditor({ initialBlocks, onSave, readOnly = false }: BlockEd
 
     navigator.clipboard.writeText(md);
     setCopied(true);
+    showToast("✓ Copied markdown SOP to clipboard", "success");
     setTimeout(() => setCopied(false), 2000);
   };
 
