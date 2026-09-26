@@ -20,18 +20,27 @@ export async function listClients(): Promise<Client[]> {
 }
 
 export async function getClientBySlug(slug: string): Promise<Client | null> {
+  const cleanSlug = decodeURIComponent(slug).toLowerCase().trim();
   const sb = supabaseAdmin();
   if (sb) {
     const { data, error } = await sb
       .from("clients")
       .select("*")
-      .eq("slug", slug)
+      .or(`slug.eq.${cleanSlug},id.eq.${cleanSlug}`)
       .maybeSingle();
     if (!error && data) return data as Client;
   }
 
   const items = await listClients();
-  return items.find((c) => c.slug === slug) ?? null;
+  return (
+    items.find(
+      (c) =>
+        c.slug.toLowerCase() === cleanSlug ||
+        c.id === cleanSlug ||
+        c.slug.startsWith(cleanSlug) ||
+        cleanSlug.startsWith(c.slug)
+    ) ?? null
+  );
 }
 
 export async function getClientById(id: string): Promise<Client | null> {
@@ -84,20 +93,21 @@ export async function updateClient(
   slugOrId: string,
   patch: Partial<Client>
 ): Promise<Client | null> {
+  const clean = decodeURIComponent(slugOrId).toLowerCase().trim();
   const now = new Date().toISOString();
   const sb = supabaseAdmin();
   if (sb) {
     const { data, error } = await sb
       .from("clients")
       .update({ ...patch, updated_at: now })
-      .or(`slug.eq.${slugOrId},id.eq.${slugOrId}`)
+      .or(`slug.eq.${clean},id.eq.${clean}`)
       .select()
       .maybeSingle();
     if (!error && data) return data as Client;
   }
 
   const items = await listClients();
-  const idx = items.findIndex((c) => c.slug === slugOrId || c.id === slugOrId);
+  const idx = items.findIndex((c) => c.slug.toLowerCase() === clean || c.id === clean);
   if (idx === -1) return null;
   items[idx] = { ...items[idx], ...patch, updated_at: now };
   await writeJsonFile(FILENAME, items);
@@ -105,16 +115,17 @@ export async function updateClient(
 }
 
 export async function deleteClient(slugOrId: string): Promise<boolean> {
+  const clean = decodeURIComponent(slugOrId).toLowerCase().trim();
   const sb = supabaseAdmin();
   if (sb) {
     const { error } = await sb
       .from("clients")
       .delete()
-      .or(`slug.eq.${slugOrId},id.eq.${slugOrId}`);
+      .or(`slug.eq.${clean},id.eq.${clean}`);
     return !error;
   }
   const items = await listClients();
-  const filtered = items.filter((c) => c.slug !== slugOrId && c.id !== slugOrId);
+  const filtered = items.filter((c) => c.slug.toLowerCase() !== clean && c.id !== clean);
   await writeJsonFile(FILENAME, filtered);
   return true;
 }

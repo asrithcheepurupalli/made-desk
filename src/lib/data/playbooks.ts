@@ -20,18 +20,27 @@ export async function listPlaybooks(): Promise<Playbook[]> {
 }
 
 export async function getPlaybookBySlug(slug: string): Promise<Playbook | null> {
+  const cleanSlug = decodeURIComponent(slug).toLowerCase().trim();
   const sb = supabaseAdmin();
   if (sb) {
     const { data, error } = await sb
       .from("playbooks")
       .select("*")
-      .eq("slug", slug)
+      .or(`slug.eq.${cleanSlug},id.eq.${cleanSlug}`)
       .maybeSingle();
     if (!error && data) return data as Playbook;
   }
 
   const items = await listPlaybooks();
-  return items.find((p) => p.slug === slug) ?? null;
+  return (
+    items.find(
+      (p) =>
+        p.slug.toLowerCase() === cleanSlug ||
+        p.id === cleanSlug ||
+        p.slug.startsWith(cleanSlug) ||
+        cleanSlug.startsWith(p.slug)
+    ) ?? null
+  );
 }
 
 export async function createPlaybook(
@@ -68,20 +77,21 @@ export async function updatePlaybook(
   slug: string,
   patch: Partial<Playbook>
 ): Promise<Playbook | null> {
+  const cleanSlug = decodeURIComponent(slug).toLowerCase().trim();
   const now = new Date().toISOString();
   const sb = supabaseAdmin();
   if (sb) {
     const { data, error } = await sb
       .from("playbooks")
       .update({ ...patch, updated_at: now })
-      .eq("slug", slug)
+      .or(`slug.eq.${cleanSlug},id.eq.${cleanSlug}`)
       .select()
       .maybeSingle();
     if (!error && data) return data as Playbook;
   }
 
   const items = await listPlaybooks();
-  const idx = items.findIndex((p) => p.slug === slug);
+  const idx = items.findIndex((p) => p.slug.toLowerCase() === cleanSlug || p.id === cleanSlug);
   if (idx === -1) return null;
   items[idx] = { ...items[idx], ...patch, updated_at: now };
   await writeJsonFile(FILENAME, items);
@@ -89,13 +99,17 @@ export async function updatePlaybook(
 }
 
 export async function deletePlaybook(slug: string): Promise<boolean> {
+  const cleanSlug = decodeURIComponent(slug).toLowerCase().trim();
   const sb = supabaseAdmin();
   if (sb) {
-    const { error } = await sb.from("playbooks").delete().eq("slug", slug);
+    const { error } = await sb
+      .from("playbooks")
+      .delete()
+      .or(`slug.eq.${cleanSlug},id.eq.${cleanSlug}`);
     return !error;
   }
   const items = await listPlaybooks();
-  const filtered = items.filter((p) => p.slug !== slug);
+  const filtered = items.filter((p) => p.slug.toLowerCase() !== cleanSlug && p.id !== cleanSlug);
   await writeJsonFile(FILENAME, filtered);
   return true;
 }
