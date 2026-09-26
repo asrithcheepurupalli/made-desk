@@ -1,26 +1,165 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --paper: #f6f3ee;
+    --paper-dim: #ede8df;
+    --paper-sub: #e2dbce;
+    --ink: #16130f;
+    --ink-pure: #0b0b0c;
+    --ink-muted: #7c7770;
+    --border-sub: #e4ddd0;
+    --accent-red: #c8102e;
+    --accent-red-hover: #a80d26;
+    --accent-gold: #bd9b4e;
+    --surface: #ffffff;
+  }
+
+  body {
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Sahaay + Prevayu Brutalist Utility Classes */
+.font-display {
+  font-family: var(--font-display), Georgia, serif;
+}
+
+.font-mono {
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.font-sans {
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Dense Brutalist Card */
+.brutal-card {
+  border: 2px solid var(--ink);
+  background-color: var(--surface);
+  box-shadow: 3px 3px 0px var(--ink);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.brutal-card:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px var(--ink);
+}
+
+.brutal-card-flat {
+  border: 2px solid var(--ink);
+  background-color: var(--surface);
+}
+
+/* Brutalist Buttons */
+.brutal-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 2px solid var(--ink);
+  background-color: var(--ink);
+  color: var(--paper);
+  padding: 0.5rem 1rem;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 2px 2px 0px var(--ink);
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.brutal-btn:hover {
+  background-color: var(--ink-pure);
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px var(--ink);
+}
+
+.brutal-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px var(--ink);
+}
+
+.brutal-btn-red {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 2px solid var(--ink);
+  background-color: var(--accent-red);
+  color: #ffffff;
+  padding: 0.5rem 1rem;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 2px 2px 0px var(--ink);
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.brutal-btn-red:hover {
+  background-color: var(--accent-red-hover);
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px var(--ink);
+}
+
+.brutal-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 2px solid var(--ink);
+  background-color: var(--surface);
+  color: var(--ink);
+  padding: 0.5rem 1rem;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 2px 2px 0px var(--ink);
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.brutal-btn-outline:hover {
+  background-color: var(--paper-dim);
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px var(--ink);
+}
+
+/* Micro Technical Label */
+.label {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Custom Scrollbar for dense lists */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--paper-dim);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--ink-muted);
+  border: 1px solid var(--ink);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink);
 }

@@ -1,0 +1,83 @@
+[
+  {
+    "id": "f1c75814-7e00-4b09-8235-63ad81c49267",
+    "title": "Train Team on Trust-Building Sales",
+    "description": "Conduct a workshop for our sales and outreach teams on the principles of building trust through value demonstration, especially for initial client engagements.",
+    "status": "todo",
+    "priority": "medium",
+    "source_capture_id": "26443c40-898b-443f-8bc0-3505e6cd4474",
+    "created_at": "2026-09-26T15:06:13.218Z",
+    "updated_at": "2026-09-26T15:06:13.218Z"
+  },
+  {
+    "id": "479e623d-f13e-4746-9e88-66fdacd688aa",
+    "title": "Integrate Value-First Outreach",
+    "description": "Revise our cold outreach templates and strategy to lead with an offer of a free, high-value resource instead of a direct sales call or calendar link.",
+    "status": "todo",
+    "priority": "high",
+    "source_capture_id": "26443c40-898b-443f-8bc0-3505e6cd4474",
+    "created_at": "2026-09-26T15:06:13.216Z",
+    "updated_at": "2026-09-26T15:06:13.216Z"
+  },
+  {
+    "id": "9440404f-afe2-4e95-b3ee-082e255be559",
+    "title": "Develop High-Value Free Resource",
+    "description": "Brainstorm and create a Notion document, template, or mini-guide that provides significant, actionable value to our target clients, similar to the cold email resource mentioned.",
+    "status": "todo",
+    "priority": "high",
+    "source_capture_id": "26443c40-898b-443f-8bc0-3505e6cd4474",
+    "created_at": "2026-09-26T15:06:13.213Z",
+    "updated_at": "2026-09-26T15:06:13.213Z"
+  },
+  {
+    "id": "78bee554-178a-441a-9308-2b3695dc2e63",
+    "title": "Document standard template in studio playbooks",
+    "description": "Convert key principles into a reusable checklist item for the team.",
+    "status": "todo",
+    "priority": "medium",
+    "source_capture_id": "261668ff-d1ec-4251-9e16-a8f7b938f88f",
+    "created_at": "2026-09-26T14:48:01.207Z",
+    "updated_at": "2026-09-26T14:48:01.207Z"
+  },
+  {
+    "id": "b42d667a-c3aa-4879-b07e-86226a72ff6c",
+    "title": "Apply outreach standard to current outreach pipeline",
+    "description": "Review upcoming client interactions and align with key takeaway: \"How to follow up with high-ticket restaurant owners: send an annotated UX video ...\"",
+    "status": "todo",
+    "priority": "high",
+    "source_capture_id": "261668ff-d1ec-4251-9e16-a8f7b938f88f",
+    "created_at": "2026-09-26T14:48:01.207Z",
+    "updated_at": "2026-09-26T14:48:01.207Z"
+  },
+  {
+    "id": "act-1",
+    "title": "Collect vector brand assets & menu photography from Al Reem",
+    "description": "Ping Tariq on WhatsApp with the direct asset upload link.",
+    "status": "todo",
+    "priority": "urgent",
+    "linked_client_id": "client-al-reem",
+    "due_date": "2026-09-27T14:40:25.492Z",
+    "created_at": "2026-09-25T14:40:25.492Z",
+    "updated_at": "2026-09-26T14:40:25.492Z"
+  },
+  {
+    "id": "act-2",
+    "title": "Draft 30s voice-note script for Dubai hospitality prospects",
+    "description": "Follow the UAE Acquisition Playbook format (3 sentences + 1 direct UX insight).",
+    "status": "todo",
+    "priority": "high",
+    "linked_playbook_id": "pb-uae-acquisition",
+    "created_at": "2026-09-24T14:40:25.492Z",
+    "updated_at": "2026-09-26T14:40:25.492Z"
+  },
+  {
+    "id": "act-3",
+    "title": "Send follow-up Loom breakdown to Novus Health Tech",
+    "description": "Touchpoint #2 from the 3-Touch System: demonstrate clinical typography contrast.",
+    "status": "in_progress",
+    "priority": "high",
+    "linked_client_id": "client-novus-health",
+    "created_at": "2026-09-23T14:40:25.492Z",
+    "updated_at": "2026-09-26T14:40:25.492Z"
+  }
+]

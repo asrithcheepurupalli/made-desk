@@ -1,0 +1,72 @@
+[
+  {
+    "id": "26443c40-898b-443f-8bc0-3505e6cd4474",
+    "raw_text": "There is one sales emoji line that made me $2,000 the first time I used it. Give away the secrets and sell the implementation. Few years ago, I used it on a complete stranger at a point when I had no case studies, no results, and no names to drop. I found an agency owner on LinkedIn named Tarana, and instead of asking her for a call, I sent her a free resource to send 1,000 to 2,000 personalized cold emails every single day to book 10 to 20 calls every single month. And I just asked her whether she wants that notion resource for free. No page and no calendar link. She said, \"Go for it.\" And I literally sent her the entire notion doc. A few days later, she herself reached out asking for a call to fix outbound for a few of her clients. I had not followed up even once with her in this entire period. On that call, we settled at $2,000, which was literally the biggest deal that I closed at that point of time. And in that call, she never asked for any case study, any results, or any reference that she wanted to talk to before working with me. I was able to close her without those things because the resource that I sent her answered for every single question before the money came up. That is the part worth understanding. Sales is all about educating your prospect about your offer and building trust. Building trust is literally the biggest factor where a lot of people misses and lose the deal. So, if you're a beginner and you don't have case studies or results to showcase, and you do in cold outreach, then stop asking people directly for a 30-minute sales call. Rather, go build the one thing that they would otherwise pay for. You cannot ask your way into being trusted. You can only show your way in.",
+    "source_url": "https://www.instagram.com/reel/DdtzGF_JMJF/?stkn=M2N0Y2xpc3J2MTk3",
+    "source_type": "reel",
+    "status": "processed",
+    "extracted_insights": [
+      {
+        "title": "Value-First Sales Approach",
+        "takeaway": "Prioritize giving away valuable 'secrets' or resources upfront to establish trust and expertise, then sell the implementation of those insights.",
+        "category": "Sales Strategy"
+      },
+      {
+        "title": "Pre-empting Objections with Education",
+        "takeaway": "A well-crafted, free resource can answer prospect questions and build confidence before a sales conversation, negating the need for case studies or references.",
+        "category": "Client Acquisition"
+      },
+      {
+        "title": "Trust as a Core Sales Driver",
+        "takeaway": "Building trust is the most critical factor in closing deals, especially for new engagements. This is achieved by demonstrating value, not by asking for a call.",
+        "category": "Sales Philosophy"
+      },
+      {
+        "title": "Strategic Cold Outreach",
+        "takeaway": "Shift from direct sales call requests in cold outreach to offering immediately actionable, high-value content that prospects would otherwise pay for.",
+        "category": "Outreach Tactics"
+      }
+    ],
+    "suggested_category": "playbook",
+    "created_at": "2026-09-26T15:05:47.534Z",
+    "updated_at": "2026-09-26T15:06:13.208Z",
+    "summary": "This strategy emphasizes leading cold outreach with a high-value, free resource to build trust and demonstrate expertise, rather than immediately pitching a sales call. It proves effective for closing deals, even without prior case studies, by pre-empting objections through education.",
+    "screenshots": [
+      "/captures/26443c40-898b-443f-8bc0-3505e6cd4474/frame_01.jpg",
+      "/captures/26443c40-898b-443f-8bc0-3505e6cd4474/frame_02.jpg",
+      "/captures/26443c40-898b-443f-8bc0-3505e6cd4474/frame_03.jpg",
+      "/captures/26443c40-898b-443f-8bc0-3505e6cd4474/frame_04.jpg"
+    ],
+    "duration_seconds": 84,
+    "processed_at": "2026-09-26T15:06:13.206Z"
+  },
+  {
+    "id": "cap-reel-ddtzgf",
+    "raw_text": "Instagram Reel Strategy: The Pre-Onboarding Asset Kit & 48-Hour Momentum System.\nBefore onboarding any high-ticket agency client, send them a pre-configured 1-page asset request checklist:\n1. Figma editor invite & design kit permissions.\n2. Vector brand assets (.svg/.ai) and brand font licenses.\n3. Domain DNS access or staging server keys.\n4. Raw uncompressed photography & media library.\nPair this with an immediate WhatsApp voice greeting confirming timeline milestones within 2 hours of invoice clearance.",
+    "source_url": "https://www.instagram.com/reel/DdtzGF_JMJF/?stkn=M2N0Y2xpc3J2MTk3",
+    "source_type": "reel",
+    "status": "processed",
+    "summary": "High-ticket pre-onboarding asset kit and 48-hour client momentum workflow. Covers pre-flight asset collection and rapid communication channel setup.",
+    "extracted_insights": [
+      {
+        "title": "Pre-Flight Asset Gathering Protocol",
+        "takeaway": "Collect vector logos, typography licenses, and Figma access before kick-off call to prevent delivery lag.",
+        "category": "onboarding"
+      },
+      {
+        "title": "2-Hour WhatsApp Welcome Rule",
+        "takeaway": "Send a 30s voice greeting and create the dedicated client group within 2 hours of payment confirmation.",
+        "category": "outreach"
+      },
+      {
+        "title": "Single Source of Truth Document",
+        "takeaway": "Maintain an interactive Notion-style workspace for each client to track open assets and stage deliverables.",
+        "category": "delivery"
+      }
+    ],
+    "suggested_category": "onboarding",
+    "processed_at": "2026-09-26T14:40:25.498Z",
+    "created_at": "2026-09-26T14:40:25.498Z",
+    "updated_at": "2026-09-26T14:40:25.498Z"
+  }
+]
