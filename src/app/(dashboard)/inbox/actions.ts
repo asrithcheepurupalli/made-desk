@@ -118,20 +118,31 @@ export async function promoteCaptureToPlaybookAction(captureId: string) {
     const capture = await getCapture(captureId);
     if (!capture) return { error: "Capture not found." };
 
-    const extraction = await extractInsightsWithGemini(capture.raw_text, capture.source_url);
-    const draft = extraction.playbook_draft;
+    // Clean up title from summary or raw text
+    let cleanTitle = (capture.summary || capture.raw_text || "Agency Operational SOP")
+      .replace(/^Title:\s*/i, "")
+      .replace(/^.*?\s+on\s+Instagram:\s*"?/i, "")
+      .replace(/"/g, "")
+      .trim();
 
-    const baseTitle = draft?.title || capture.summary?.slice(0, 50) || "New Operational SOP";
-    const slug = baseTitle
+    if (cleanTitle.length > 60) {
+      cleanTitle = cleanTitle.slice(0, 60).trim();
+    }
+    if (!cleanTitle) cleanTitle = "New Operational SOP";
+
+    const baseSlug = cleanTitle
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "");
+      .replace(/(^-|-$)/g, "")
+      .slice(0, 40);
+
+    const slug = `${baseSlug || "sop"}-${Date.now().toString().slice(-4)}`;
 
     const contentBlocks: any[] = [
       {
         id: `b-title-${Date.now()}`,
         type: "heading_1",
-        text: baseTitle,
+        text: cleanTitle,
       },
       {
         id: `b-summary-${Date.now()}`,
@@ -185,12 +196,20 @@ export async function promoteCaptureToPlaybookAction(captureId: string) {
       });
     }
 
+    // Infer category
+    let category: any = "acquisition";
+    const cat = capture.suggested_category?.toLowerCase() || "";
+    if (cat.includes("onboard")) category = "onboarding";
+    else if (cat.includes("outreach") || cat.includes("cold")) category = "outreach";
+    else if (cat.includes("price") || cat.includes("rate")) category = "pricing";
+    else if (cat.includes("deliver")) category = "delivery";
+
     const playbook = await createPlaybook({
-      slug: `${slug}-${Date.now().toString().slice(-4)}`,
-      title: baseTitle,
-      category: draft?.category || "acquisition",
-      region: draft?.region || "global",
-      tags: draft?.tags || ["capture-derived", "sop"],
+      slug,
+      title: cleanTitle,
+      category,
+      region: "global",
+      tags: ["capture-derived", "sop", category],
       summary: capture.summary || "Operational playbook derived from research capture.",
       content: contentBlocks,
       source_capture_ids: [capture.id],
@@ -198,9 +217,10 @@ export async function promoteCaptureToPlaybookAction(captureId: string) {
 
     revalidatePath("/playbooks");
     revalidatePath("/inbox");
+    revalidatePath("/dashboard");
     return { success: true, slug: playbook.slug };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error promoting capture to playbook:", error);
-    return { error: "Failed to convert capture to playbook." };
+    return { error: error?.message || "Failed to convert capture to playbook." };
   }
 }

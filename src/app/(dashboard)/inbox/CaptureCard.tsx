@@ -41,11 +41,16 @@ export function CaptureCard({ capture }: { capture: Capture }) {
 
   const Icon = sourceIcons[capture.source_type] || FileText;
 
+  const [promoteError, setPromoteError] = useState<string | null>(null);
+
   const handlePromote = () => {
+    setPromoteError(null);
     startPromote(async () => {
       const res = await promoteCaptureToPlaybookAction(capture.id);
-      if (res.success && res.slug) {
-        router.push(`/playbooks/${res.slug}`);
+      if (res.error) {
+        setPromoteError(res.error);
+      } else if (res.success && res.slug) {
+        window.location.href = `/playbooks/${res.slug}`;
       }
     });
   };
@@ -212,6 +217,12 @@ export function CaptureCard({ capture }: { capture: Capture }) {
             )}
           </div>
         </div>
+
+        {promoteError && (
+          <div className="mt-3 p-2 bg-[#fbe8eb] border border-[#c8102e] text-[#c8102e] text-[11px] font-mono">
+            {promoteError}
+          </div>
+        )}
 
         {/* Card Footer Actions */}
         <div className="pt-4 mt-4 border-t-2 border-[#16130f] flex items-center justify-between">
