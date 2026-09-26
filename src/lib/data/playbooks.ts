@@ -12,14 +12,10 @@ export async function listPlaybooks(): Promise<Playbook[]> {
       .from("playbooks")
       .select("*")
       .order("created_at", { ascending: false });
-    if (!error && data && data.length > 0) return data as Playbook[];
+    if (!error && data) return data as Playbook[];
   }
 
-  const items = await readJsonFile<Playbook[]>(FILENAME, SEED_PLAYBOOKS);
-  if (items.length === 0) {
-    await writeJsonFile(FILENAME, SEED_PLAYBOOKS);
-    return SEED_PLAYBOOKS;
-  }
+  const items = await readJsonFile<Playbook[]>(FILENAME, []);
   return items;
 }
 

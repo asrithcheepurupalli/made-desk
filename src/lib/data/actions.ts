@@ -12,14 +12,10 @@ export async function listNextActions(): Promise<NextAction[]> {
       .from("next_actions")
       .select("*")
       .order("created_at", { ascending: false });
-    if (!error && data && data.length > 0) return data as NextAction[];
+    if (!error && data) return data as NextAction[];
   }
 
-  const items = await readJsonFile<NextAction[]>(FILENAME, SEED_ACTIONS);
-  if (items.length === 0) {
-    await writeJsonFile(FILENAME, SEED_ACTIONS);
-    return SEED_ACTIONS;
-  }
+  const items = await readJsonFile<NextAction[]>(FILENAME, []);
   return items;
 }
 

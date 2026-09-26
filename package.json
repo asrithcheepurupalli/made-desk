@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "tsx scripts/seed.ts",
+    "reset": "tsx scripts/reset.ts",
     "desk": "tsx scripts/desk.ts",
     "mcp": "tsx scripts/mcp-server.ts"
   },

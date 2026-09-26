@@ -12,14 +12,10 @@ export async function listClients(): Promise<Client[]> {
       .from("clients")
       .select("*")
       .order("created_at", { ascending: false });
-    if (!error && data && data.length > 0) return data as Client[];
+    if (!error && data) return data as Client[];
   }
 
-  const items = await readJsonFile<Client[]>(FILENAME, SEED_CLIENTS);
-  if (items.length === 0) {
-    await writeJsonFile(FILENAME, SEED_CLIENTS);
-    return SEED_CLIENTS;
-  }
+  const items = await readJsonFile<Client[]>(FILENAME, []);
   return items;
 }
 
