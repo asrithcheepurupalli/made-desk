@@ -55,6 +55,8 @@ export function ClientsPipeline({ initialClients }: ClientsPipelineProps) {
   const [whatsapp, setWhatsapp] = useState("");
   const [role, setRole] = useState("");
 
+  const [createError, setCreateError] = useState<string | null>(null);
+
   const filteredClients = clients.filter((c) => {
     if (selectedRegion !== "all" && c.region !== selectedRegion) return false;
     if (searchQuery.trim()) {
@@ -78,6 +80,7 @@ export function ClientsPipeline({ initialClients }: ClientsPipelineProps) {
   const handleCreateClient = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
+    setCreateError(null);
 
     startTransition(async () => {
       const formData = new FormData();
@@ -90,7 +93,9 @@ export function ClientsPipeline({ initialClients }: ClientsPipelineProps) {
       if (role) formData.append("role", role);
 
       const res = await createClientAction(formData);
-      if (res.slug) {
+      if (res.error) {
+        setCreateError(res.error);
+      } else if (res.slug) {
         window.location.href = `/clients/${res.slug}`;
       }
     });
@@ -175,6 +180,11 @@ export function ClientsPipeline({ initialClients }: ClientsPipelineProps) {
           </div>
 
           <form onSubmit={handleCreateClient} className="space-y-4">
+            {createError && (
+              <div className="p-3 bg-[#fbe8eb] border-2 border-[#c8102e] text-[#c8102e] text-xs font-mono font-bold">
+                {createError}
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
               <div>
                 <label className="label text-[#7c7770] block mb-1">Company / Brand Name</label>
