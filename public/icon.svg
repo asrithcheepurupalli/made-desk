@@ -1,15 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Dark Ink Luxury Tile -->
-  <rect width="512" height="512" fill="#0b0b0c" rx="96"/>
-  <rect x="8" y="8" width="496" height="496" fill="none" stroke="#262320" stroke-width="16" rx="88"/>
-
-  <!-- Serif Italic made. Wordmark -->
-  <g transform="translate(256, 260)">
-    <text x="-40" y="0" font-family="'Fraunces', 'Georgia', 'Playfair Display', serif" font-size="160" font-style="italic" font-weight="600" fill="#f6f3ee" text-anchor="middle" letter-spacing="-6">made</text>
-    <circle cx="115" cy="-8" r="18" fill="#c8102e"/>
+  <rect width="512" height="512" fill="#0b0b0c" rx="100"/>
+  <g transform="translate(256, 290)">
+    <text x="-40" y="0" font-family="'Fraunces', 'Georgia', 'Playfair Display', serif" font-size="210" font-style="italic" font-weight="600" fill="#f6f3ee" text-anchor="middle" letter-spacing="-8">made</text>
+    <circle cx="155" cy="-10" r="24" fill="#c8102e"/>
   </g>
-
-  <!-- DESK Monospace Badge -->
-  <rect x="156" y="315" width="200" height="54" fill="#f6f3ee" rx="4"/>
-  <text x="256" y="353" font-family="'Space Mono', 'Courier New', monospace" font-size="28" font-weight="800" fill="#0b0b0c" text-anchor="middle" letter-spacing="8">DESK</text>
 </svg>

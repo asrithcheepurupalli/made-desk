@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -11,13 +11,9 @@ import {
   Users,
   Bot,
   Plus,
-  Compass,
-  Download,
-  Smartphone,
 } from "lucide-react";
-import { PRODUCT, STUDIO } from "@/lib/brand";
+import { STUDIO } from "@/lib/brand";
 import { Wordmark } from "./Wordmark";
-import { InstallAppModal } from "./InstallAppModal";
 
 interface SidebarProps {
   onOpenQuickCapture?: () => void;
@@ -26,36 +22,6 @@ interface SidebarProps {
 export function Sidebar({ onOpenQuickCapture }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isStandalone, setIsStandalone] = useState(false);
-
-  useEffect(() => {
-    // Check if running as standalone PWA
-    const isStandaloneMode =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as any).standalone === true;
-    setIsStandalone(isStandaloneMode);
-
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-    return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-  }, []);
-
-  const handleInstallClick = () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      deferredPrompt.userChoice.then(() => {
-        setDeferredPrompt(null);
-      });
-    } else {
-      setIsInstallModalOpen(true);
-    }
-  };
 
   const navItems = [
     {
@@ -190,21 +156,8 @@ export function Sidebar({ onOpenQuickCapture }: SidebarProps) {
         </nav>
       </div>
 
-      {/* Bottom Status & PWA Install */}
+      {/* Bottom Status */}
       <div className="p-4 border-t-2 border-[#16130f] bg-white space-y-2.5">
-        {!isStandalone && (
-          <button
-            onClick={handleInstallClick}
-            className="w-full flex items-center justify-between p-2 border border-[#16130f] bg-[#f6f3ee] hover:bg-[#ede8df] text-[11px] font-mono font-bold text-[#16130f] transition-colors"
-          >
-            <span className="flex items-center gap-1.5">
-              <Download className="w-3.5 h-3.5 text-[#c8102e]" />
-              <span>Install App</span>
-            </span>
-            <span className="text-[9px] bg-[#16130f] text-white px-1 py-0.2">PWA</span>
-          </button>
-        )}
-
         <div className="flex items-center justify-between text-[11px] font-mono text-[#7c7770]">
           <span>AI Engine</span>
           <span className="label text-[#16130f] bg-[#ede8df] px-1.5 py-0.5 border border-[#16130f]">
@@ -212,23 +165,10 @@ export function Sidebar({ onOpenQuickCapture }: SidebarProps) {
           </span>
         </div>
         <div className="flex items-center justify-between text-[11px] font-mono text-[#7c7770]">
-          <span>App Mode</span>
-          <span className="label text-[#c8102e] font-bold">
-            {isStandalone ? "STANDALONE APP" : "STUDIO OPERATIONAL"}
-          </span>
+          <span>Studio Mode</span>
+          <span className="label text-[#c8102e] font-bold">OPERATIONAL</span>
         </div>
       </div>
-
-      <InstallAppModal
-        isOpen={isInstallModalOpen}
-        onClose={() => setIsInstallModalOpen(false)}
-        onNativeInstall={() => {
-          if (deferredPrompt) {
-            deferredPrompt.prompt();
-          }
-        }}
-        canNativeInstall={!!deferredPrompt}
-      />
     </aside>
   );
 }

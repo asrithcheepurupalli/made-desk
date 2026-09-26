@@ -14,12 +14,9 @@ export default function Icon() {
           width: "100%",
           height: "100%",
           display: "flex",
-          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
           background: "#0b0b0c",
-          border: "12px solid #262320",
-          position: "relative",
         }}
       >
         <div
@@ -31,7 +28,7 @@ export default function Icon() {
         >
           <span
             style={{
-              fontSize: 180,
+              fontSize: 220,
               fontFamily: "Georgia, serif",
               fontWeight: 600,
               fontStyle: "italic",
@@ -43,7 +40,7 @@ export default function Icon() {
           </span>
           <span
             style={{
-              fontSize: 180,
+              fontSize: 220,
               fontFamily: "Georgia, serif",
               fontWeight: 700,
               fontStyle: "normal",
@@ -52,31 +49,6 @@ export default function Icon() {
             }}
           >
             .
-          </span>
-        </div>
-
-        <div
-          style={{
-            marginTop: -15,
-            padding: "6px 20px",
-            background: "#f6f3ee",
-            border: "2px solid #0b0b0c",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <span
-            style={{
-              fontSize: 32,
-              fontFamily: "monospace",
-              fontWeight: 800,
-              color: "#0b0b0c",
-              letterSpacing: "0.25em",
-              textTransform: "uppercase",
-            }}
-          >
-            DESK
           </span>
         </div>
       </div>

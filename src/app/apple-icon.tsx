@@ -14,7 +14,6 @@ export default function AppleIcon() {
           width: "100%",
           height: "100%",
           display: "flex",
-          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
           background: "#0b0b0c",
@@ -29,19 +28,19 @@ export default function AppleIcon() {
         >
           <span
             style={{
-              fontSize: 64,
+              fontSize: 78,
               fontFamily: "Georgia, serif",
               fontWeight: 600,
               fontStyle: "italic",
               color: "#f6f3ee",
-              letterSpacing: "-0.03em",
+              letterSpacing: "-0.04em",
             }}
           >
             made
           </span>
           <span
             style={{
-              fontSize: 64,
+              fontSize: 78,
               fontFamily: "Georgia, serif",
               fontWeight: 700,
               fontStyle: "normal",
@@ -50,29 +49,6 @@ export default function AppleIcon() {
             }}
           >
             .
-          </span>
-        </div>
-
-        <div
-          style={{
-            marginTop: -6,
-            padding: "2px 8px",
-            background: "#f6f3ee",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <span
-            style={{
-              fontSize: 12,
-              fontFamily: "monospace",
-              fontWeight: 800,
-              color: "#0b0b0c",
-              letterSpacing: "0.2em",
-            }}
-          >
-            DESK
           </span>
         </div>
       </div>
