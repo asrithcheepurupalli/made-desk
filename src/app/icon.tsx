@@ -17,8 +17,9 @@ export default function Icon() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "#16130f",
-          border: "16px solid #16130f",
+          background: "#0b0b0c",
+          border: "12px solid #262320",
+          position: "relative",
         }}
       >
         <div
@@ -30,32 +31,36 @@ export default function Icon() {
         >
           <span
             style={{
-              fontSize: 160,
-              fontFamily: "sans-serif",
-              fontWeight: 900,
+              fontSize: 180,
+              fontFamily: "Georgia, serif",
+              fontWeight: 600,
+              fontStyle: "italic",
               color: "#f6f3ee",
-              letterSpacing: "-0.05em",
+              letterSpacing: "-0.04em",
             }}
           >
             made
           </span>
           <span
             style={{
-              fontSize: 160,
-              fontFamily: "sans-serif",
-              fontWeight: 900,
+              fontSize: 180,
+              fontFamily: "Georgia, serif",
+              fontWeight: 700,
+              fontStyle: "normal",
               color: "#c8102e",
+              marginLeft: 2,
             }}
           >
             .
           </span>
         </div>
+
         <div
           style={{
-            marginTop: -10,
-            padding: "8px 24px",
+            marginTop: -15,
+            padding: "6px 20px",
             background: "#f6f3ee",
-            border: "4px solid #16130f",
+            border: "2px solid #0b0b0c",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -63,11 +68,11 @@ export default function Icon() {
         >
           <span
             style={{
-              fontSize: 48,
+              fontSize: 32,
               fontFamily: "monospace",
               fontWeight: 800,
-              color: "#16130f",
-              letterSpacing: "0.2em",
+              color: "#0b0b0c",
+              letterSpacing: "0.25em",
               textTransform: "uppercase",
             }}
           >

@@ -2,10 +2,10 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "made. desk — Operating System",
+    name: "made. desk — Studio Operating System",
     short_name: "made. desk",
-    description: "Internal operating system, capture inbox, and grounded AI assistant for made. by ac.",
-    start_url: "/inbox",
+    description: "Internal operating system, client workspace, capture inbox, and grounded AI assistant for made. by ac.",
+    start_url: "/dashboard",
     display: "standalone",
     background_color: "#f6f3ee",
     theme_color: "#16130f",
@@ -31,6 +31,11 @@ export default function manifest(): MetadataRoute.Manifest {
       },
     ],
     shortcuts: [
+      {
+        name: "Mission Control",
+        url: "/dashboard",
+        description: "Studio overview and urgent tasks",
+      },
       {
         name: "Capture Inbox",
         url: "/inbox",

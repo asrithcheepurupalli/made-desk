@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  LayoutDashboard,
   Inbox,
   CheckSquare,
   BookOpen,
@@ -15,6 +16,7 @@ import {
   Smartphone,
 } from "lucide-react";
 import { PRODUCT, STUDIO } from "@/lib/brand";
+import { Wordmark } from "./Wordmark";
 import { InstallAppModal } from "./InstallAppModal";
 
 interface SidebarProps {
@@ -57,34 +59,40 @@ export function Sidebar({ onOpenQuickCapture }: SidebarProps) {
 
   const navItems = [
     {
+      href: "/dashboard",
+      label: "Mission Control",
+      icon: LayoutDashboard,
+      shortcut: "1",
+    },
+    {
       href: "/inbox",
       label: "Capture Inbox",
       icon: Inbox,
-      shortcut: "1",
+      shortcut: "2",
     },
     {
       href: "/actions",
       label: "Next Actions",
       icon: CheckSquare,
-      shortcut: "2",
+      shortcut: "3",
     },
     {
       href: "/playbooks",
       label: "Playbooks & SOPs",
       icon: BookOpen,
-      shortcut: "3",
+      shortcut: "4",
     },
     {
       href: "/clients",
       label: "Client Workspace",
       icon: Users,
-      shortcut: "4",
+      shortcut: "5",
     },
     {
       href: "/assistant",
       label: "Grounded AI",
       icon: Bot,
-      shortcut: "5",
+      shortcut: "6",
     },
   ];
 
@@ -104,11 +112,12 @@ export function Sidebar({ onOpenQuickCapture }: SidebarProps) {
         return;
       }
 
-      if (e.key === "1") router.push("/inbox");
-      if (e.key === "2") router.push("/actions");
-      if (e.key === "3") router.push("/playbooks");
-      if (e.key === "4") router.push("/clients");
-      if (e.key === "5") router.push("/assistant");
+      if (e.key === "1") router.push("/dashboard");
+      if (e.key === "2") router.push("/inbox");
+      if (e.key === "3") router.push("/actions");
+      if (e.key === "4") router.push("/playbooks");
+      if (e.key === "5") router.push("/clients");
+      if (e.key === "6") router.push("/assistant");
     }
 
     window.addEventListener("keydown", handleKeyDown);
@@ -121,14 +130,7 @@ export function Sidebar({ onOpenQuickCapture }: SidebarProps) {
       <div>
         <div className="p-5 border-b-2 border-[#16130f] flex items-center justify-between bg-white">
           <div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-display font-black text-xl tracking-tight text-[#16130f]">
-                made<span className="text-[#c8102e]">.</span>
-              </span>
-              <span className="font-mono font-bold text-xs uppercase tracking-widest px-1.5 py-0.5 border border-[#16130f] bg-[#f6f3ee]">
-                desk
-              </span>
-            </div>
+            <Wordmark word="made" sub="desk" href="/dashboard" className="text-xl" />
             <p className="label text-[#7c7770] mt-1">{STUDIO}</p>
           </div>
           <div className="w-2.5 h-2.5 rounded-full bg-[#c8102e] border border-[#16130f] animate-pulse" title="System Live" />
@@ -156,7 +158,7 @@ export function Sidebar({ onOpenQuickCapture }: SidebarProps) {
           {navItems.map((item) => {
             const isActive =
               pathname === item.href ||
-              (item.href !== "/inbox" && pathname.startsWith(item.href));
+              (item.href !== "/dashboard" && pathname.startsWith(item.href));
             const Icon = item.icon;
 
             return (
