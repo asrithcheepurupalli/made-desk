@@ -99,3 +99,15 @@ export async function deleteNextAction(id: string): Promise<boolean> {
   await writeJsonFile(FILENAME, filtered);
   return true;
 }
+
+export async function deleteActionsByCaptureId(captureId: string): Promise<boolean> {
+  const sb = supabaseAdmin();
+  if (sb) {
+    const { error } = await sb.from("next_actions").delete().eq("source_capture_id", captureId);
+    return !error;
+  }
+  const items = await listNextActions();
+  const filtered = items.filter((a) => a.source_capture_id !== captureId);
+  await writeJsonFile(FILENAME, filtered);
+  return true;
+}

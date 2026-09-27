@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { readJsonFile, writeJsonFile } from "@/lib/supabase/filestore";
+import { deleteActionsByCaptureId } from "./actions";
 import type { Capture } from "./types";
 
 const FILENAME = "captures.json";
@@ -88,11 +89,14 @@ export async function updateCapture(
 export async function deleteCapture(id: string): Promise<boolean> {
   const sb = supabaseAdmin();
   if (sb) {
-    const { error } = await sb.from("captures").delete().eq("id", id);
-    return !error;
+    await sb.from("captures").delete().eq("id", id);
+  } else {
+    const items = await listCaptures();
+    const filtered = items.filter((c) => c.id !== id);
+    await writeJsonFile(FILENAME, filtered);
   }
-  const items = await readJsonFile<Capture[]>(FILENAME, []);
-  const filtered = items.filter((c) => c.id !== id);
-  await writeJsonFile(FILENAME, filtered);
+
+  // Automatically cascade delete all actions derived from this capture
+  await deleteActionsByCaptureId(id);
   return true;
 }

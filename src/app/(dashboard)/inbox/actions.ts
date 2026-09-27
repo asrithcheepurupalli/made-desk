@@ -105,7 +105,11 @@ export async function processCaptureAction(formData: FormData) {
 export async function deleteCaptureAction(id: string) {
   try {
     await deleteCapture(id);
+    revalidatePath("/dashboard");
     revalidatePath("/inbox");
+    revalidatePath("/actions");
+    revalidatePath("/playbooks");
+    revalidatePath("/");
     return { success: true };
   } catch (error) {
     console.error("Error deleting capture:", error);

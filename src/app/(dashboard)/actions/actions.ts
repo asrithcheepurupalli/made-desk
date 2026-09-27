@@ -8,6 +8,13 @@ import {
 } from "@/lib/data/actions";
 import type { ActionPriority, ActionStatus } from "@/lib/data/types";
 
+function revalidateActionSurfaces() {
+  revalidatePath("/dashboard");
+  revalidatePath("/actions");
+  revalidatePath("/inbox");
+  revalidatePath("/");
+}
+
 export async function createActionHandler(formData: FormData) {
   const title = formData.get("title") as string;
   const description = (formData.get("description") as string) || undefined;
@@ -25,8 +32,7 @@ export async function createActionHandler(formData: FormData) {
       status: "todo",
     });
 
-    revalidatePath("/actions");
-    revalidatePath("/inbox");
+    revalidateActionSurfaces();
     return { success: true, actionId: action.id };
   } catch (error) {
     console.error("Error creating action:", error);
@@ -37,8 +43,7 @@ export async function createActionHandler(formData: FormData) {
 export async function toggleActionStatusHandler(id: string, newStatus: ActionStatus) {
   try {
     await updateNextAction(id, { status: newStatus });
-    revalidatePath("/actions");
-    revalidatePath("/inbox");
+    revalidateActionSurfaces();
     return { success: true };
   } catch (error) {
     console.error("Error updating action status:", error);
@@ -49,7 +54,7 @@ export async function toggleActionStatusHandler(id: string, newStatus: ActionSta
 export async function updateActionPriorityHandler(id: string, priority: ActionPriority) {
   try {
     await updateNextAction(id, { priority });
-    revalidatePath("/actions");
+    revalidateActionSurfaces();
     return { success: true };
   } catch (error) {
     console.error("Error updating action priority:", error);
@@ -60,7 +65,7 @@ export async function updateActionPriorityHandler(id: string, priority: ActionPr
 export async function deleteActionHandler(id: string) {
   try {
     await deleteNextAction(id);
-    revalidatePath("/actions");
+    revalidateActionSurfaces();
     return { success: true };
   } catch (error) {
     console.error("Error deleting action:", error);

@@ -50,6 +50,10 @@ export function DashboardOverview({
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  React.useEffect(() => {
+    setActions(initialActions);
+  }, [initialActions]);
+
   const handleToggleDone = (action: NextAction) => {
     const nextStatus: ActionStatus = action.status === "done" ? "todo" : "done";
     setActions((prev) =>
