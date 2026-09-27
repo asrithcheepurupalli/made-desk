@@ -5,6 +5,9 @@ import { CaptureForm } from "./CaptureForm";
 import { CaptureCard } from "./CaptureCard";
 import { Inbox, Sparkles, CheckSquare, Layers } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata = {
   title: "Capture Inbox: made. desk",
 };

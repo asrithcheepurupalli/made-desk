@@ -3,6 +3,9 @@ import { Sparkles, Bot, ShieldCheck, Zap } from "lucide-react";
 import { ChatWindow } from "./ChatWindow";
 import { getDynamicSuggestionsAction } from "./actions";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata = {
   title: "Studio AI Assistant: made. desk",
 };

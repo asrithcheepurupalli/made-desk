@@ -3,6 +3,9 @@ import { listPlaybooks } from "@/lib/data/playbooks";
 import { PlaybooksList } from "./PlaybooksList";
 import { BookOpen, Layers, Sparkles } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata = {
   title: "Agency Playbooks & SOPs: made. desk",
 };

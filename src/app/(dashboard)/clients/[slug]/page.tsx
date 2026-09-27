@@ -4,6 +4,9 @@ import { getClientBySlug } from "@/lib/data/clients";
 import { listNextActions } from "@/lib/data/actions";
 import { ClientWorkspaceView } from "./ClientWorkspaceView";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 interface PageProps {
   params: Promise<{
     slug: string;

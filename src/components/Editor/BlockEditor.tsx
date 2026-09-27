@@ -135,16 +135,20 @@ export function BlockEditor({ initialBlocks, onSave, readOnly = false }: BlockEd
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "unsaved">("saved");
   const [copied, setCopied] = useState(false);
+  const isEditingRef = useRef(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Sync when initialBlocks changes externally
+  // Sync only if user is not actively editing
   useEffect(() => {
-    setBlocks(normalizeBlocks(initialBlocks));
+    if (!isEditingRef.current) {
+      setBlocks(normalizeBlocks(initialBlocks));
+    }
   }, [initialBlocks]);
 
   const triggerAutoSave = useCallback(
     (currentBlocks: EditorBlock[]) => {
       if (!onSave || readOnly) return;
+      isEditingRef.current = true;
       setSaveStatus("unsaved");
 
       if (saveTimeoutRef.current) {
@@ -156,11 +160,14 @@ export function BlockEditor({ initialBlocks, onSave, readOnly = false }: BlockEd
         try {
           await onSave(currentBlocks);
           setSaveStatus("saved");
+          setTimeout(() => {
+            isEditingRef.current = false;
+          }, 500);
         } catch (err) {
           console.error("Auto-save failed:", err);
           setSaveStatus("unsaved");
         }
-      }, 1200);
+      }, 1000);
     },
     [onSave, readOnly]
   );
@@ -171,6 +178,7 @@ export function BlockEditor({ initialBlocks, onSave, readOnly = false }: BlockEd
     try {
       await onSave(blocks);
       setSaveStatus("saved");
+      isEditingRef.current = false;
       showToast("✓ Playbook saved successfully", "success");
     } catch (err) {
       console.error("Manual save failed:", err);

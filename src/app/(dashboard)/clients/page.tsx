@@ -3,6 +3,9 @@ import { listClients } from "@/lib/data/clients";
 import { ClientsPipeline } from "./ClientsPipeline";
 import { Users, Briefcase, CheckCircle2, ArrowUpRight } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata = {
   title: "Client Workspace & Pipeline: made. desk",
 };

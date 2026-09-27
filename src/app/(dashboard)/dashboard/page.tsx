@@ -5,6 +5,9 @@ import { listNextActions } from "@/lib/data/actions";
 import { listCaptures } from "@/lib/data/captures";
 import { DashboardOverview } from "./DashboardOverview";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata = {
   title: "Mission Control: made. desk",
 };

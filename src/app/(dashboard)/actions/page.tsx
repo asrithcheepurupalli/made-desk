@@ -4,6 +4,9 @@ import { listCaptures } from "@/lib/data/captures";
 import { ActionsBoard } from "./ActionsBoard";
 import { CheckSquare, AlertCircle, CheckCircle2, Clock } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata = {
   title: "Next Actions: made. desk",
 };

@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 import { getPlaybookBySlug } from "@/lib/data/playbooks";
 import { PlaybookEditorView } from "./PlaybookEditorView";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 interface PageProps {
   params: Promise<{
     slug: string;
