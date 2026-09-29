@@ -2,6 +2,7 @@ import { createCapture, updateCapture, deleteCapture, getCapture } from "@/lib/d
 import { createNextAction } from "@/lib/data/actions";
 import { createPlaybook } from "@/lib/data/playbooks";
 import { extractCaptureAction } from "./extract";
+import { generateSopAction, type GeneratedSop } from "./sop";
 import type { SourceType, Capture } from "@/lib/data/types";
 
 export async function processCaptureAction(formData: FormData) {
@@ -91,6 +92,80 @@ export async function deleteCaptureAction(id: string) {
   }
 }
 
+let blockSeq = 0;
+const bid = (kind: string) => `b-${kind}-${Date.now()}-${blockSeq++}`;
+
+function sourceBlocks(capture: Capture): any[] {
+  const out: any[] = [];
+  if (capture.screenshots && capture.screenshots.length > 0) {
+    out.push({ id: bid("shots"), type: "heading_2", text: "Visual references" });
+    capture.screenshots.forEach((src: string, idx: number) => {
+      out.push({ id: bid("img"), type: "image", text: `Source frame ${idx + 1}`, url: src });
+    });
+  }
+  if (capture.source_url) {
+    out.push({
+      id: bid("src"),
+      type: "callout",
+      text: `Source: ${capture.source_url}. Written only from what the source says. Anything it left out is listed under "Not covered by the source".`,
+    });
+  }
+  return out;
+}
+
+/** Full, structured SOP written from the whole transcript */
+function buildSopBlocks(sop: GeneratedSop, capture: Capture): any[] {
+  const b: any[] = [{ id: bid("title"), type: "heading_1", text: sop.title }];
+  if (sop.summary) b.push({ id: bid("sum"), type: "paragraph", text: sop.summary });
+  if (sop.purpose) {
+    b.push({ id: bid("h"), type: "heading_2", text: "Purpose" }, { id: bid("p"), type: "paragraph", text: sop.purpose });
+  }
+  if (sop.when_to_use) {
+    b.push({ id: bid("h"), type: "heading_2", text: "When to use" }, { id: bid("p"), type: "paragraph", text: sop.when_to_use });
+  }
+  b.push({ id: bid("h"), type: "heading_2", text: "Procedure" });
+  sop.steps.forEach((st) =>
+    b.push({ id: bid("step"), type: "numbered_list", text: st.details ? `${st.title}: ${st.details}` : st.title })
+  );
+  if (sop.scripts.length) {
+    b.push({ id: bid("h"), type: "heading_2", text: "Scripts and examples (verbatim from source)" });
+    sop.scripts.forEach((sc) => {
+      if (sc.label) b.push({ id: bid("lbl"), type: "callout", text: sc.label });
+      b.push({ id: bid("code"), type: "code_snippet", text: sc.text });
+    });
+  }
+  if (sop.rules.length) {
+    b.push({ id: bid("h"), type: "heading_2", text: "Rules" });
+    sop.rules.forEach((r) => b.push({ id: bid("rule"), type: "bullet_list", text: r }));
+  }
+  if (sop.checklist.length) {
+    b.push({ id: bid("h"), type: "heading_2", text: "Checklist before we apply this" });
+    sop.checklist.forEach((c) => b.push({ id: bid("chk"), type: "todo", text: c, checked: false }));
+  }
+  if (sop.not_covered.length) {
+    b.push({ id: bid("h"), type: "heading_2", text: "Not covered by the source" });
+    sop.not_covered.forEach((g) => b.push({ id: bid("gap"), type: "bullet_list", text: g }));
+  }
+  b.push(...sourceBlocks(capture));
+  return b;
+}
+
+/** Fallback when the AI is unavailable: keep the summary and takeaways */
+function buildBasicBlocks(title: string, capture: Capture): any[] {
+  const b: any[] = [
+    { id: bid("title"), type: "heading_1", text: title },
+    { id: bid("sum"), type: "paragraph", text: capture.summary || capture.raw_text },
+  ];
+  if (capture.extracted_insights?.length) {
+    b.push({ id: bid("h"), type: "heading_2", text: "Key rules" });
+    capture.extracted_insights.forEach((item: any) =>
+      b.push({ id: bid("todo"), type: "todo", text: typeof item === "string" ? item : item.takeaway || item.title, checked: false })
+    );
+  }
+  b.push(...sourceBlocks(capture));
+  return b;
+}
+
 export async function promoteCaptureToPlaybookAction(
   captureId: string,
   fallbackCapture?: Capture
@@ -99,102 +174,50 @@ export async function promoteCaptureToPlaybookAction(
     const capture = (await getCapture(captureId)) || fallbackCapture;
     if (!capture) return { error: "Capture not found." };
 
-    // Clean up title from summary or raw text
-    let cleanTitle = (capture.summary || capture.raw_text || "Agency Operational SOP")
-      .replace(/^Title:\s*/i, "")
-      .replace(/^.*?\s+on\s+Instagram:\s*"?/i, "")
-      .replace(/"/g, "")
-      .trim();
-
-    if (cleanTitle.length > 60) {
-      cleanTitle = cleanTitle.slice(0, 60).trim();
+    if (capture.source_quality === "caption_only") {
+      return {
+        error:
+          "We only have this post's caption, not its real content, so we can't write a trustworthy SOP. Watch it, paste the key points as a new note, then promote that.",
+      };
     }
-    if (!cleanTitle) cleanTitle = "New Operational SOP";
 
-    const baseSlug = cleanTitle
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "")
-      .slice(0, 40);
+    const sop = await generateSopAction({
+      transcript: capture.raw_text,
+      summary: capture.summary,
+      sourceUrl: capture.source_url,
+    });
 
+    let title = sop?.title;
+    if (!title) {
+      // Fallback title: first sentence of the summary, cut at a word boundary
+      const first = (capture.summary || capture.raw_text || "").replace(/^(Title|CAPTION):\s*/i, "").split(/(?<=[.!?])\s/)[0].trim();
+      title = first.length > 60 ? first.slice(0, 60).replace(/\s+\S*$/, "") : first;
+      if (!title) title = "New Operational SOP";
+    }
+
+    const baseSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 40);
     const slug = `${baseSlug || "sop"}-${Date.now().toString().slice(-4)}`;
 
-    const contentBlocks: any[] = [
-      {
-        id: `b-title-${Date.now()}`,
-        type: "heading_1",
-        text: cleanTitle,
-      },
-      {
-        id: `b-summary-${Date.now()}`,
-        type: "paragraph",
-        text: capture.summary || capture.raw_text,
-      },
-    ];
-
-    // Embed screenshots if available
-    if (capture.screenshots && capture.screenshots.length > 0) {
-      contentBlocks.push({
-        id: `b-shots-head-${Date.now()}`,
-        type: "heading_2",
-        text: "Source Reel Keyframes & Visual References",
-      });
-
-      capture.screenshots.forEach((src: string, idx: number) => {
-        contentBlocks.push({
-          id: `b-img-${Date.now()}-${idx}`,
-          type: "image",
-          text: `Source visual frame ${idx + 1}`,
-          url: src,
-        });
-      });
+    let category: any = sop?.category || "acquisition";
+    if (!sop) {
+      const cat = capture.suggested_category?.toLowerCase() || "";
+      if (cat.includes("onboard")) category = "onboarding";
+      else if (cat.includes("outreach") || cat.includes("cold")) category = "outreach";
+      else if (cat.includes("price") || cat.includes("rate")) category = "pricing";
+      else if (cat.includes("deliver")) category = "delivery";
     }
-
-    // Embed structured takeaway checklist
-    if (capture.extracted_insights && capture.extracted_insights.length > 0) {
-      contentBlocks.push({
-        id: `b-takeaways-head-${Date.now()}`,
-        type: "heading_2",
-        text: "Key Operational Rules & Checklist",
-      });
-
-      capture.extracted_insights.forEach((item: any, idx: number) => {
-        contentBlocks.push({
-          id: `b-todo-${Date.now()}-${idx}`,
-          type: "todo",
-          text: typeof item === "string" ? item : item.takeaway || item.title,
-          checked: false,
-        });
-      });
-    }
-
-    // Embed callout with source URL if exists
-    if (capture.source_url) {
-      contentBlocks.push({
-        id: `b-callout-${Date.now()}`,
-        type: "callout",
-        text: `Originally captured from ${capture.source_url}. Verified and stored in made. desk knowledge base.`,
-      });
-    }
-
-    // Infer category
-    let category: any = "acquisition";
-    const cat = capture.suggested_category?.toLowerCase() || "";
-    if (cat.includes("onboard")) category = "onboarding";
-    else if (cat.includes("outreach") || cat.includes("cold")) category = "outreach";
-    else if (cat.includes("price") || cat.includes("rate")) category = "pricing";
-    else if (cat.includes("deliver")) category = "delivery";
 
     const playbook = await createPlaybook({
       slug,
-      title: cleanTitle,
+      title,
       category,
-      region: "global",
-      tags: ["capture-derived", "sop", category],
-      summary: capture.summary || "Operational playbook derived from research capture.",
-      content: contentBlocks,
+      region: sop?.region || "global",
+      tags: sop?.tags?.length ? sop.tags : ["capture-derived", "sop", category],
+      summary: sop?.summary || capture.summary || "Operational playbook derived from research capture.",
+      content: sop ? buildSopBlocks(sop, capture) : buildBasicBlocks(title, capture),
       source_capture_ids: [capture.id],
     });
+
     return { success: true, slug: playbook.slug };
   } catch (error: any) {
     console.error("Error promoting capture to playbook:", error);

@@ -296,7 +296,8 @@ async function transcribeWithGemini(
             {
               text:
                 "Transcribe every word spoken in this media verbatim, do not summarize or add anything. " +
-                "Then list all on-screen text exactly as shown, in order, one line each. " +
+                "Then list ALL on-screen text exactly as shown, in order, one line each. " +
+                "The video shows text slides that change every few seconds, so capture every distinct slide, including small captions, examples, lists, and labels. " +
                 "If there is no speech or no on-screen text, write NONE for that section. " +
                 "Use exactly this format:\nSPOKEN:\n...\nON-SCREEN TEXT:\n...",
             },
@@ -304,7 +305,7 @@ async function transcribeWithGemini(
           ],
         },
       ],
-      config: { temperature: 0, thinkingConfig: { thinkingBudget: 0 } },
+      config: { temperature: 0, thinkingConfig: { thinkingBudget: 4096 } },
     });
     const text = (response.text || "").trim();
     if (!text) return null;
