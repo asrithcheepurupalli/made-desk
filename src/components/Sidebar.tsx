@@ -1,6 +1,7 @@
 "use client";
 
 import { exportBackup, importBackup } from "@/lib/store/backup";
+import { ClaudeLink } from "./ClaudeLink";
 import React, { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -199,6 +200,7 @@ export function Sidebar({ onOpenQuickCapture }: SidebarProps) {
             />
           </label>
         </div>
+        <ClaudeLink />
         <div className="flex items-center justify-between text-[11px] font-mono text-[#7c7770]">
           <span>Studio Mode</span>
           <span className="label text-[#c8102e] font-bold">OPERATIONAL</span>

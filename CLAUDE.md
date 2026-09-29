@@ -9,8 +9,11 @@ Before answering any questions regarding agency strategy, outreach messages, cli
 ### CLI Bridge Commands
 You can run direct CLI commands from the project directory:
 
-- **Get Full Studio Context**:
+- **Get Full Studio Context** (full text of every SOP, client, task, capture; line 2 states when data last synced):
   `npx tsx scripts/desk.ts context`
+  `npx tsx scripts/desk.ts search "<words>"`
+
+Data lives in the user's browser (IndexedDB). `.data/` is a mirror written by the app's "Link Claude" button (sidebar) or loaded with `npx tsx scripts/desk.ts import <backup.json>`. It is read-only in practice: CLI writes are overwritten on the next sync. `.data/` is gitignored, never commit it.
 - **Playbooks & SOPs**:
   `npx tsx scripts/desk.ts playbooks list`
   `npx tsx scripts/desk.ts playbooks get <slug>`

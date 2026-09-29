@@ -3,6 +3,11 @@ import { listPlaybooks, getPlaybookBySlug, createPlaybook, updatePlaybook } from
 import { listClients, getClientBySlug, createClient, updateClient } from "../src/lib/data/clients";
 import { listNextActions, createNextAction, updateNextAction } from "../src/lib/data/actions";
 import { listCaptures, createCapture, updateCapture, getCapture } from "../src/lib/data/captures";
+import { buildStudioContext } from "../src/lib/data/context";
+import { playbookToMarkdown, clientToMarkdown, blocksToMarkdown } from "../src/lib/data/text";
+import { freshnessHeader, WRITE_WARNING } from "./lib";
+import fs from "node:fs";
+import path from "node:path";
 import { extractInsightsWithGemini } from "../src/lib/ai/gemini";
 import { extractMediaFromUrl } from "../src/lib/media/extractor";
 import type { ClientStage, ActionPriority, ActionStatus, PlaybookCategory, Region, SourceType } from "../src/lib/data/types";
@@ -10,38 +15,55 @@ import type { ClientStage, ActionPriority, ActionStatus, PlaybookCategory, Regio
 const [,, command, subcommand, ...args] = process.argv;
 
 async function printStudioContext() {
-  const [playbooks, clients, actions, captures] = await Promise.all([
-    listPlaybooks(),
-    listClients(),
-    listNextActions(),
-    listCaptures(),
-  ]);
+  const brief = [subcommand, ...args].includes("--brief");
+  console.log(await buildStudioContext({ full: !brief, header: freshnessHeader() }));
+}
 
-  console.log("# made. desk: Studio Operational Context & Knowledge Base\n");
-  console.log("## Active Playbooks & SOPs");
-  playbooks.forEach((p) => {
-    console.log(`- **${p.title}** (\`/playbooks/${p.slug}\`) [${p.category.toUpperCase()} | ${p.region.toUpperCase()}]`);
-    if (p.summary) console.log(`  *${p.summary}*`);
-  });
+async function searchStudio() {
+  const term = [subcommand, ...args].filter((x) => !x.startsWith("--")).join(" ").toLowerCase().trim();
+  if (!term) {
+    console.error('Usage: desk search "<words>"');
+    process.exit(1);
+  }
+  const [playbooks, clients, captures] = await Promise.all([listPlaybooks(), listClients(), listCaptures()]);
+  const hits: string[] = [];
+  for (const p of playbooks) {
+    const text = `${p.title}\n${p.summary || ""}\n${blocksToMarkdown(p.content)}`;
+    const lines = text.split("\n").filter((l) => l.toLowerCase().includes(term));
+    if (lines.length) hits.push(`PLAYBOOK ${p.title} (${p.slug})\n${lines.slice(0, 5).map((l) => "  " + l.trim().slice(0, 200)).join("\n")}`);
+  }
+  for (const c of clients) {
+    const text = clientToMarkdown(c);
+    const lines = text.split("\n").filter((l) => l.toLowerCase().includes(term));
+    if (lines.length) hits.push(`CLIENT ${c.company || c.name} (${c.slug})\n${lines.slice(0, 3).map((l) => "  " + l.trim().slice(0, 200)).join("\n")}`);
+  }
+  for (const c of captures) {
+    if (`${c.summary || ""} ${c.raw_text}`.toLowerCase().includes(term)) hits.push(`CAPTURE ${c.source_url || c.source_type}: ${(c.summary || c.raw_text).slice(0, 160)}`);
+  }
+  console.log(hits.length ? hits.join("\n\n") : `No matches for "${term}".`);
+}
 
-  console.log("\n## Active Clients & Pipeline");
-  clients.forEach((c) => {
-    const done = c.onboarding_checklist.filter((i) => i.completed).length;
-    const total = c.onboarding_checklist.length;
-    console.log(`- **${c.name}** (${c.company || "Direct"}) — Stage: \`${c.stage.toUpperCase()}\` | Region: \`${c.region.toUpperCase()}\` | Checklist: ${done}/${total}`);
-  });
-
-  console.log("\n## Urgent & High Priority Next Actions");
-  actions
-    .filter((a) => a.status !== "done")
-    .forEach((a) => {
-      console.log(`- [${a.status.toUpperCase()}] [${a.priority.toUpperCase()}] **${a.title}**${a.description ? ` : ${a.description}` : ""}`);
-    });
-
-  console.log("\n## Recent Research Captures");
-  captures.slice(0, 5).forEach((cap) => {
-    console.log(`- [${cap.source_type.toUpperCase()}] **${cap.summary || cap.raw_text.slice(0, 60) + "..."}** (${cap.status})`);
-  });
+async function importBackup() {
+  const file = subcommand;
+  if (!file) {
+    console.error("Usage: desk import <made-desk-backup.json>   (from the app's Export button)");
+    process.exit(1);
+  }
+  const parsed = JSON.parse(fs.readFileSync(file, "utf-8"));
+  if (parsed?.app !== "made-desk" || typeof parsed.data !== "object") {
+    console.error("That is not a made. desk backup file.");
+    process.exit(1);
+  }
+  const dir = path.join(process.cwd(), ".data");
+  fs.mkdirSync(dir, { recursive: true });
+  let n = 0;
+  for (const [name, rows] of Object.entries<any>(parsed.data)) {
+    if (!Array.isArray(rows)) continue;
+    const slim = name === "captures.json" ? rows.map((r: any) => ({ ...r, screenshots: undefined })) : rows;
+    fs.writeFileSync(path.join(dir, name), JSON.stringify(slim, null, 2));
+    n += rows.length;
+  }
+  console.log(`Imported ${n} records into .data/`);
 }
 
 async function handlePlaybooks() {
@@ -67,7 +89,7 @@ async function handlePlaybooks() {
       console.error(`Playbook "${slug}" not found.`);
       process.exit(1);
     }
-    console.log(JSON.stringify(playbook, null, 2));
+    console.log(args.includes("--json") ? JSON.stringify(playbook, null, 2) : playbookToMarkdown(playbook));
   } else if (subcommand === "create") {
     const title = args[0];
     const category = (args[1] as PlaybookCategory) || "acquisition";
@@ -287,6 +309,12 @@ async function main() {
     case "summary":
       await printStudioContext();
       break;
+    case "search":
+      await searchStudio();
+      break;
+    case "import":
+      await importBackup();
+      break;
     case "playbooks":
       await handlePlaybooks();
       break;
@@ -304,7 +332,9 @@ async function main() {
 made. desk CLI: Direct agency knowledge and operational control
 
 Usage:
-  desk context                         Print aggregated agency context (playbooks, clients, tasks)
+  desk context [--brief]               Print the whole studio: every SOP body, clients, tasks, research
+  desk search "<words>"                Find matching lines across SOPs, clients, captures
+  desk import <backup.json>            Load an app Export file into .data/
   desk playbooks [list|get|create]     Manage agency SOPs and regional playbooks
   desk clients [list|get|update-stage] Manage client workspaces, stages, and onboarding
   desk actions [list|create|toggle]    Manage prioritized next actions

@@ -11,6 +11,9 @@ import { listPlaybooks, getPlaybookBySlug, createPlaybook, updatePlaybook } from
 import { listClients, getClientBySlug, createClient, updateClient } from "../src/lib/data/clients.js";
 import { listNextActions, createNextAction, updateNextAction } from "../src/lib/data/actions.js";
 import { listCaptures, createCapture, getCapture } from "../src/lib/data/captures.js";
+import { buildStudioContext } from "../src/lib/data/context.js";
+import { playbookToMarkdown } from "../src/lib/data/text.js";
+import { freshnessHeader } from "./lib.js";
 import { extractInsightsWithGemini } from "../src/lib/ai/gemini.js";
 import type { ClientStage, ActionPriority, ActionStatus, PlaybookCategory, Region } from "../src/lib/data/types.js";
 
@@ -29,7 +32,7 @@ const server = new Server(
 const TOOLS: Tool[] = [
   {
     name: "desk_get_studio_context",
-    description: "Get complete operational context of made. by ac agency including active playbooks, client pipeline, urgent next actions, and research captures.",
+    description: "Get the complete made. by ac knowledge base: the FULL text of every playbook and SOP, every client workspace and checklist, open next actions, and recent research. Call this before answering any studio, strategy, outreach, or client question.",
     inputSchema: {
       type: "object",
       properties: {},
@@ -206,42 +209,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     switch (name) {
       case "desk_get_studio_context": {
-        const [playbooks, clients, actions, captures] = await Promise.all([
-          listPlaybooks(),
-          listClients(),
-          listNextActions(),
-          listCaptures(),
-        ]);
         return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(
-                {
-                  studio: "made. by ac",
-                  playbooks: playbooks.map((p) => ({
-                    slug: p.slug,
-                    title: p.title,
-                    category: p.category,
-                    region: p.region,
-                    summary: p.summary,
-                  })),
-                  clients: clients.map((c) => ({
-                    slug: c.slug,
-                    name: c.name,
-                    company: c.company,
-                    stage: c.stage,
-                    region: c.region,
-                    checklistProgress: `${c.onboarding_checklist.filter((i) => i.completed).length}/${c.onboarding_checklist.length}`,
-                  })),
-                  urgentActions: actions.filter((a) => a.status !== "done"),
-                  recentCaptures: captures.slice(0, 5),
-                },
-                null,
-                2
-              ),
-            },
-          ],
+          content: [{ type: "text", text: await buildStudioContext({ full: true, header: freshnessHeader() }) }],
         };
       }
 
@@ -264,7 +233,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           return { isError: true, content: [{ type: "text", text: `Playbook "${args?.slug}" not found.` }] };
         }
         return {
-          content: [{ type: "text", text: JSON.stringify(playbook, null, 2) }],
+          content: [{ type: "text", text: playbookToMarkdown(playbook) }],
         };
       }
 
