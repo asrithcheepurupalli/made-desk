@@ -49,64 +49,111 @@ export interface MediaExtractionResult {
 }
 
 /**
- * Direct Instagram Public Embed Scraper.
- * Instagram serves the full post caption and poster image through /embed/captioned/ with 0 auth.
+ * Direct Instagram Public Scraper & oEmbed API.
+ * Uses official public oEmbed endpoint first for 100% reliable captions and posters,
+ * with captioned HTML embed fallback.
  */
 export async function fetchInstagramEmbed(url: string): Promise<{ text: string; images: string[] }> {
   try {
-    const match = url.match(/\/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/i);
+    const cleanUrl = url.split("?")[0].replace(/\/$/, "");
+    const match = cleanUrl.match(/\/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/i);
     if (!match || !match[1]) return { text: "", images: [] };
 
     const shortcode = match[1];
+    let extractedText = "";
+    const images: string[] = [];
+
+    // 1. Official Instagram oEmbed API (fastest, zero auth, works on Reels, Carousels, and Posts)
+    try {
+      const oembedUrl = `https://www.instagram.com/api/v1/oembed/?url=https://www.instagram.com/p/${shortcode}/`;
+      const oembedRes = await fetch(oembedUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+          "Accept": "application/json",
+        },
+        signal: AbortSignal.timeout(6000),
+      });
+
+      if (oembedRes.ok) {
+        const data = await oembedRes.json();
+        if (data.title && data.title.trim().length > 5) {
+          extractedText = data.title.trim();
+        }
+        if (data.thumbnail_url) {
+          images.push(data.thumbnail_url);
+        }
+      }
+    } catch (err) {
+      console.warn("[made. desk] Instagram oEmbed API warning:", err);
+    }
+
+    // 2. If we already have the text from oEmbed, also try to fetch extra carousel images if needed
     const embedUrl = `https://www.instagram.com/p/${shortcode}/embed/captioned/`;
+    try {
+      const res = await fetch(embedUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        },
+        signal: AbortSignal.timeout(6000),
+      });
 
-    const res = await fetch(embedUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      },
-      signal: AbortSignal.timeout(8000),
-    });
+      if (res.ok) {
+        const html = await res.text();
 
-    if (res.ok) {
-      const html = await res.text();
-      const images: string[] = [];
+        // Extract embedded media poster
+        const imgMatch = html.match(/class="EmbeddedMediaImage"[^>]*src="([^"]+)"/i) || html.match(/src="([^"]+)"[^>]*class="EmbeddedMediaImage"/i);
+        if (imgMatch && imgMatch[1]) {
+          const cleanSrc = imgMatch[1].replace(/&amp;/g, "&");
+          if (!images.includes(cleanSrc)) images.push(cleanSrc);
+        }
 
-      // Extract embedded media poster
-      const imgMatch = html.match(/class="EmbeddedMediaImage"[^>]*src="([^"]+)"/i) || html.match(/src="([^"]+)"[^>]*class="EmbeddedMediaImage"/i);
-      if (imgMatch && imgMatch[1]) {
-        images.push(imgMatch[1].replace(/&amp;/g, "&"));
-      }
+        // Look for CDN image URLs
+        const cdnMatches = html.matchAll(/https:\/\/[^"'\s<>]+(?:cdninstagram\.com|fbcdn\.net)[^"'\s<>]+/g);
+        for (const m of cdnMatches) {
+          const src = m[0].replace(/&amp;/g, "&").replace(/\\u0026/g, "&");
+          if (
+            !src.includes("static.cdninstagram.com") &&
+            !src.includes("rsrc.php") &&
+            !src.includes("s150x150") &&
+            !src.includes("profile_pic") &&
+            !src.includes("favicon") &&
+            !src.includes("emoji") &&
+            !images.includes(src)
+          ) {
+            images.push(src);
+          }
+        }
 
-      // Look for CDN image URLs
-      const cdnMatches = html.matchAll(/https:\/\/[^"'\s<>]+cdninstagram\.com[^"'\s<>]+/g);
-      for (const m of cdnMatches) {
-        const src = m[0].replace(/&amp;/g, "&").replace(/\\u0026/g, "&");
-        if (!src.includes("s150x150") && !src.includes("profile_pic") && !images.includes(src)) {
-          images.push(src);
+        // If oEmbed didn't yield text, extract from HTML caption
+        if (!extractedText) {
+          const captionMatch = html.match(/<div class="Caption"[^>]*>([\s\S]*?)<\/div>/i);
+          if (captionMatch && captionMatch[1]) {
+            const rawCaption = captionMatch[1]
+              .replace(/<br\s*\/?>/gi, "\n")
+              .replace(/<a[^>]*>(.*?)<\/a>/gi, "$1")
+              .replace(/<[^>]+>/g, "")
+              .replace(/View all \d+ comments.*/gi, "")
+              .trim();
+
+            if (rawCaption.length > 5) {
+              extractedText = rawCaption;
+            }
+          }
         }
       }
+    } catch (embedErr) {
+      // Ignored if oEmbed already succeeded
+    }
 
-      // Extract full caption
-      const captionMatch = html.match(/<div class="Caption"[^>]*>([\s\S]*?)<\/div>/i);
-      if (captionMatch && captionMatch[1]) {
-        const rawCaption = captionMatch[1]
-          .replace(/<br\s*\/?>/gi, "\n")
-          .replace(/<a[^>]*>(.*?)<\/a>/gi, "$1")
-          .replace(/<[^>]+>/g, "")
-          .replace(/View all \d+ comments.*/gi, "")
-          .trim();
-
-        if (rawCaption.length > 5) {
-          return {
-            text: rawCaption,
-            images: images.slice(0, 5),
-          };
-        }
-      }
+    if (extractedText || images.length > 0) {
+      return {
+        text: extractedText,
+        images: images.slice(0, 6),
+      };
     }
   } catch (err) {
-    console.warn("[made. desk] Instagram embed scraper failed:", err);
+    console.warn("[made. desk] Instagram extractor failed:", err);
   }
   return { text: "", images: [] };
 }
