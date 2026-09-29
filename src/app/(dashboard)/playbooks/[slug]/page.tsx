@@ -1,6 +1,5 @@
 import React from "react";
-import { notFound } from "next/navigation";
-import { getPlaybookBySlug } from "@/lib/data/playbooks";
+import { getPlaybookBySlug, createPlaybook } from "@/lib/data/playbooks";
 import { PlaybookEditorView } from "./PlaybookEditorView";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +17,7 @@ export async function generateMetadata({ params }: PageProps) {
 
   if (!playbook) {
     return {
-      title: "Playbook Not Found: made. desk",
+      title: "Playbook Workspace: made. desk",
     };
   }
 
@@ -29,10 +28,36 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function PlaybookDetailPage({ params }: PageProps) {
   const { slug } = await params;
-  const playbook = await getPlaybookBySlug(slug);
+  let playbook = await getPlaybookBySlug(slug);
 
   if (!playbook) {
-    notFound();
+    const cleanTitle = decodeURIComponent(slug)
+      .replace(/-[0-9]{4}$/, "")
+      .replace(/-/g, " ");
+
+    const formattedTitle =
+      cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1);
+
+    playbook = await createPlaybook({
+      slug,
+      title: formattedTitle || "Operational SOP",
+      category: "operations",
+      region: "global",
+      summary: `Standard operational playbook for ${formattedTitle}.`,
+      tags: [],
+      content: [
+        {
+          id: `b-head-${Date.now()}`,
+          type: "heading_1",
+          text: formattedTitle || "Operational SOP",
+        },
+        {
+          id: `b-desc-${Date.now()}`,
+          type: "paragraph",
+          text: "Document operating steps, outreach templates, and guidelines below.",
+        },
+      ],
+    });
   }
 
   return (

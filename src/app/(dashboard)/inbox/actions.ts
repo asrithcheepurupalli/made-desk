@@ -6,7 +6,7 @@ import { createNextAction } from "@/lib/data/actions";
 import { createPlaybook } from "@/lib/data/playbooks";
 import { extractInsightsWithGemini } from "@/lib/ai/gemini";
 import { extractMediaFromUrl } from "@/lib/media/extractor";
-import type { SourceType } from "@/lib/data/types";
+import type { SourceType, Capture } from "@/lib/data/types";
 
 export async function processCaptureAction(formData: FormData) {
   const rawText = (formData.get("raw_text") as string) || "";
@@ -117,9 +117,12 @@ export async function deleteCaptureAction(id: string) {
   }
 }
 
-export async function promoteCaptureToPlaybookAction(captureId: string) {
+export async function promoteCaptureToPlaybookAction(
+  captureId: string,
+  fallbackCapture?: Capture
+) {
   try {
-    const capture = await getCapture(captureId);
+    const capture = (await getCapture(captureId)) || fallbackCapture;
     if (!capture) return { error: "Capture not found." };
 
     // Clean up title from summary or raw text
@@ -163,7 +166,7 @@ export async function promoteCaptureToPlaybookAction(captureId: string) {
         text: "Source Reel Keyframes & Visual References",
       });
 
-      capture.screenshots.forEach((src, idx) => {
+      capture.screenshots.forEach((src: string, idx: number) => {
         contentBlocks.push({
           id: `b-img-${Date.now()}-${idx}`,
           type: "image",
@@ -181,7 +184,7 @@ export async function promoteCaptureToPlaybookAction(captureId: string) {
         text: "Key Operational Rules & Checklist",
       });
 
-      capture.extracted_insights.forEach((item, idx) => {
+      capture.extracted_insights.forEach((item: any, idx: number) => {
         contentBlocks.push({
           id: `b-todo-${Date.now()}-${idx}`,
           type: "todo",

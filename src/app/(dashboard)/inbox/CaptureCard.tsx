@@ -48,7 +48,7 @@ export function CaptureCard({ capture }: { capture: Capture }) {
   const handlePromote = () => {
     setPromoteError(null);
     startPromote(async () => {
-      const res = await promoteCaptureToPlaybookAction(capture.id);
+      const res = await promoteCaptureToPlaybookAction(capture.id, capture);
       if (res.error) {
         setPromoteError(res.error);
         showToast(res.error, "error");
