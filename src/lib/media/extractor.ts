@@ -207,7 +207,16 @@ export async function fetchWebUrlContent(url: string): Promise<{ text: string; i
  * server-side and inline it as a data URI. It then persists with the capture.
  */
 export async function downloadImageAsDataUri(src: string): Promise<string | null> {
-  if (src.startsWith("data:") || src.startsWith("/")) return src;
+  if (src.startsWith("data:")) return src;
+  if (src.startsWith("/captures/")) {
+    try {
+      const buf = await fs.readFile(path.join(process.cwd(), "public", src));
+      return `data:image/jpeg;base64,${buf.toString("base64")}`;
+    } catch {
+      return null;
+    }
+  }
+  if (src.startsWith("/")) return null;
   try {
     const res = await fetch(src, {
       headers: {

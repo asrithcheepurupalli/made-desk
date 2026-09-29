@@ -1,6 +1,3 @@
-"use server";
-
-import { revalidatePath } from "next/cache";
 import {
   createClient,
   updateClient,
@@ -108,7 +105,6 @@ export async function createClientAction(formData: FormData) {
       tags: [stage, region],
     });
 
-    revalidatePath("/clients");
     return { success: true, slug: client.slug };
   } catch (error) {
     console.error("Error creating client:", error);
@@ -119,7 +115,6 @@ export async function createClientAction(formData: FormData) {
 export async function updateClientStageAction(id: string, stage: ClientStage) {
   try {
     await updateClient(id, { stage });
-    revalidatePath("/clients");
     return { success: true };
   } catch (error) {
     console.error("Error updating client stage:", error);
@@ -147,8 +142,6 @@ export async function toggleClientChecklistItemAction(
     );
 
     await updateClient(clientId, { onboarding_checklist: updatedChecklist });
-    revalidatePath(`/clients/${client.slug}`);
-    revalidatePath("/clients");
     return { success: true };
   } catch (error) {
     console.error("Error toggling checklist item:", error);
@@ -172,7 +165,6 @@ export async function addClientChecklistItemAction(
 
     const updatedChecklist = [...client.onboarding_checklist, newItem];
     await updateClient(clientId, { onboarding_checklist: updatedChecklist });
-    revalidatePath(`/clients/${client.slug}`);
     return { success: true };
   } catch (error) {
     console.error("Error adding checklist item:", error);
@@ -190,7 +182,6 @@ export async function deleteClientChecklistItemAction(
 
     const updatedChecklist = client.onboarding_checklist.filter((i) => i.id !== taskId);
     await updateClient(clientId, { onboarding_checklist: updatedChecklist });
-    revalidatePath(`/clients/${client.slug}`);
     return { success: true };
   } catch (error) {
     console.error("Error deleting checklist item:", error);
@@ -217,8 +208,6 @@ export async function updateClientWorkspaceAction(
       ...(meta?.tags ? { tags: meta.tags } : {}),
     });
 
-    revalidatePath(`/clients/${slug}`);
-    revalidatePath("/clients");
     return { success: true, client: updated };
   } catch (error) {
     console.error("Error updating client workspace:", error);
@@ -229,7 +218,6 @@ export async function updateClientWorkspaceAction(
 export async function deleteClientAction(id: string) {
   try {
     await deleteClient(id);
-    revalidatePath("/clients");
     return { success: true };
   } catch (error) {
     console.error("Error deleting client:", error);

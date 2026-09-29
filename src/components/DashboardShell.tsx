@@ -3,15 +3,19 @@
 import React, { useState, useEffect } from "react";
 import { Sidebar } from "./Sidebar";
 import { QuickCaptureModal } from "./QuickCaptureModal";
+import { requestPersistentStorage } from "@/lib/store/backup";
 import { ToastProvider } from "./Toast";
 import { Command, X, Keyboard } from "lucide-react";
 
 interface DashboardShellProps {
   children: React.ReactNode;
-  ephemeral?: boolean;
 }
 
-export function DashboardShell({ children, ephemeral }: DashboardShellProps) {
+export function DashboardShell({ children }: DashboardShellProps) {
+  React.useEffect(() => {
+    requestPersistentStorage();
+  }, []);
+
   const [isQuickCaptureOpen, setIsQuickCaptureOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
 
@@ -43,11 +47,6 @@ export function DashboardShell({ children, ephemeral }: DashboardShellProps) {
 
         {/* Main Content Area */}
         <main className="flex-1 flex flex-col h-screen overflow-y-auto bg-[#f6f3ee] transition-opacity duration-200">
-          {ephemeral && (
-            <div className="border-b-2 border-[#16130f] bg-[#c8102e] text-white px-4 py-2 font-mono text-[11px] uppercase tracking-wider">
-              Temporary storage: data will not survive a refresh or redeploy. Add SUPABASE_SERVICE_ROLE_KEY and NEXT_PUBLIC_SUPABASE_URL to make it permanent.
-            </div>
-          )}
           {children}
         </main>
 

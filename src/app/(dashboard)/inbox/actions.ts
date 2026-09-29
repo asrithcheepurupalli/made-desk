@@ -1,11 +1,7 @@
-"use server";
-
-import { revalidatePath } from "next/cache";
 import { createCapture, updateCapture, deleteCapture, getCapture } from "@/lib/data/captures";
 import { createNextAction } from "@/lib/data/actions";
 import { createPlaybook } from "@/lib/data/playbooks";
-import { extractInsightsWithGemini } from "@/lib/ai/gemini";
-import { extractMediaFromUrl } from "@/lib/media/extractor";
+import { extractCaptureAction } from "./extract";
 import type { SourceType, Capture } from "@/lib/data/types";
 
 export async function processCaptureAction(formData: FormData) {
@@ -17,8 +13,9 @@ export async function processCaptureAction(formData: FormData) {
     return { error: "Please provide a reel/video URL or paste notes." };
   }
 
+  let captureId: string | null = null;
   try {
-    // 1. Create initial capture record
+    // 1. Save the capture in browser storage right away so it is never lost
     const capture = await createCapture({
       raw_text: rawText.trim() || `[Auto Ingestion for ${sourceUrl}]`,
       source_url: sourceUrl,
@@ -26,70 +23,39 @@ export async function processCaptureAction(formData: FormData) {
       status: "pending",
       extracted_insights: [],
     });
+    captureId = capture.id;
 
-    let effectiveTranscript = rawText.trim();
-    let screenshots: string[] = [];
-    let durationSeconds: number | undefined = undefined;
+    // 2. Server does the heavy lifting (transcript, screenshots, AI) and stores nothing
+    const result = await extractCaptureAction({
+      captureId: capture.id,
+      rawText,
+      sourceUrl,
+      sourceType,
+    });
+    const { extraction } = result;
 
-    // 2. If a video URL is provided, run automated yt-dlp + ffmpeg + Gemini audio transcription & screenshots
-    if (
-      sourceUrl &&
-      (sourceType === "reel" ||
-        sourceType === "youtube" ||
-        sourceUrl.includes("instagram.com") ||
-        sourceUrl.includes("youtube.com") ||
-        sourceUrl.includes("youtu.be"))
-    ) {
-      try {
-        const media = await extractMediaFromUrl(sourceUrl, capture.id);
-        if (media.transcript && media.transcript.trim().length > 0) {
-          effectiveTranscript = media.transcript;
-        }
-        if (media.screenshots && media.screenshots.length > 0) {
-          screenshots = media.screenshots;
-        }
-        if (media.durationSeconds) {
-          durationSeconds = media.durationSeconds;
-        }
-      } catch (mediaErr) {
-        console.warn("Media extraction warning:", mediaErr);
-      }
-    }
-
-    // 3. Run Gemini structured extraction on the transcript
-    const extraction = await extractInsightsWithGemini(
-      effectiveTranscript || `Content from ${sourceUrl}`,
-      sourceUrl
-    );
-
-    // 4. Update capture record
+    // 3. Save the results locally
     await updateCapture(capture.id, {
-      raw_text: effectiveTranscript || rawText.trim(),
+      raw_text: result.transcript || rawText.trim(),
       status: "processed",
       summary: extraction.summary,
       extracted_insights: extraction.extracted_insights,
       suggested_category: extraction.suggested_category,
-      screenshots: screenshots.length > 0 ? screenshots : undefined,
-      duration_seconds: durationSeconds,
+      screenshots: result.screenshots.length > 0 ? result.screenshots : undefined,
+      duration_seconds: result.durationSeconds,
       processed_at: new Date().toISOString(),
     });
 
-    // 5. Auto-populate Next Actions derived from extraction
-    if (extraction.proposed_actions && extraction.proposed_actions.length > 0) {
-      for (const act of extraction.proposed_actions) {
-        await createNextAction({
-          title: act.title,
-          description: act.description,
-          priority: act.priority || "medium",
-          status: "todo",
-          source_capture_id: capture.id,
-        });
-      }
+    // 4. Derive Next Actions
+    for (const act of extraction.proposed_actions || []) {
+      await createNextAction({
+        title: act.title,
+        description: act.description,
+        priority: act.priority || "medium",
+        status: "todo",
+        source_capture_id: capture.id,
+      });
     }
-
-    revalidatePath("/inbox");
-    revalidatePath("/actions");
-    revalidatePath("/playbooks");
 
     return {
       success: true,
@@ -98,6 +64,8 @@ export async function processCaptureAction(formData: FormData) {
     };
   } catch (error) {
     console.error("Error processing capture action:", error);
+    // Keep the capture but mark it failed so it is visible and can be deleted
+    if (captureId) await updateCapture(captureId, { status: "failed" }).catch(() => {});
     return { error: "Failed to process capture with AI." };
   }
 }
@@ -105,11 +73,6 @@ export async function processCaptureAction(formData: FormData) {
 export async function deleteCaptureAction(id: string) {
   try {
     await deleteCapture(id);
-    revalidatePath("/dashboard");
-    revalidatePath("/inbox");
-    revalidatePath("/actions");
-    revalidatePath("/playbooks");
-    revalidatePath("/");
     return { success: true };
   } catch (error) {
     console.error("Error deleting capture:", error);
@@ -221,10 +184,6 @@ export async function promoteCaptureToPlaybookAction(
       content: contentBlocks,
       source_capture_ids: [capture.id],
     });
-
-    revalidatePath("/playbooks");
-    revalidatePath("/inbox");
-    revalidatePath("/dashboard");
     return { success: true, slug: playbook.slug };
   } catch (error: any) {
     console.error("Error promoting capture to playbook:", error);

@@ -38,10 +38,7 @@ export async function getClientBySlug(slug: string): Promise<Client | null> {
   return (
     items.find(
       (c) =>
-        c.slug.toLowerCase() === cleanSlug ||
-        c.id === cleanSlug ||
-        c.slug.startsWith(cleanSlug) ||
-        cleanSlug.startsWith(c.slug)
+        c.slug.toLowerCase() === cleanSlug || c.id === cleanSlug
     ) ?? null
   );
 }

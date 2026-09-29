@@ -38,10 +38,7 @@ export async function getPlaybookBySlug(slug: string): Promise<Playbook | null> 
   return (
     items.find(
       (p) =>
-        p.slug.toLowerCase() === cleanSlug ||
-        p.id === cleanSlug ||
-        p.slug.startsWith(cleanSlug) ||
-        cleanSlug.startsWith(p.slug)
+        p.slug.toLowerCase() === cleanSlug || p.id === cleanSlug
     ) ?? null
   );
 }

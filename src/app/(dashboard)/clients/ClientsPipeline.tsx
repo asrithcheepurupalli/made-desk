@@ -40,6 +40,9 @@ const STAGES: { id: ClientStage; label: string; description: string; color: stri
 
 export function ClientsPipeline({ initialClients }: ClientsPipelineProps) {
   const [clients, setClients] = useState<Client[]>(initialClients);
+  React.useEffect(() => {
+    setClients(initialClients);
+  }, [initialClients]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRegion, setSelectedRegion] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"board" | "table">("board");

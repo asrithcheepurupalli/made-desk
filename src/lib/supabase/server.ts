@@ -38,8 +38,3 @@ export function must<T extends { error: { message: string } | null }>(res: T, wh
   if (res.error) throw new Error(`Supabase ${what} failed: ${res.error.message}`);
   return res;
 }
-
-/** True when the app is running on storage that does not survive a refresh or redeploy. */
-export function isEphemeralStorage(): boolean {
-  return !hasSupabase();
-}

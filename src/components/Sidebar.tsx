@@ -1,5 +1,6 @@
 "use client";
 
+import { exportBackup, importBackup } from "@/lib/store/backup";
 import React, { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -163,6 +164,40 @@ export function Sidebar({ onOpenQuickCapture }: SidebarProps) {
           <span className="label text-[#16130f] bg-[#ede8df] px-1.5 py-0.5 border border-[#16130f]">
             Gemini Flash
           </span>
+        </div>
+        <div className="flex items-center justify-between text-[11px] font-mono text-[#7c7770]">
+          <span>Storage</span>
+          <span className="label text-[#16130f] bg-[#ede8df] px-1.5 py-0.5 border border-[#16130f]">
+            This browser
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => exportBackup()}
+            className="border-2 border-[#16130f] bg-white px-2 py-1.5 font-mono text-[10px] font-bold uppercase hover:bg-[#ede8df] transition-colors"
+          >
+            Export
+          </button>
+          <label className="border-2 border-[#16130f] bg-white px-2 py-1.5 font-mono text-[10px] font-bold uppercase text-center cursor-pointer hover:bg-[#ede8df] transition-colors">
+            Import
+            <input
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (!file) return;
+                try {
+                  const n = await importBackup(file);
+                  alert(`Restored ${n} records from backup.`);
+                } catch (err) {
+                  alert(err instanceof Error ? err.message : "Could not import that file.");
+                }
+              }}
+            />
+          </label>
         </div>
         <div className="flex items-center justify-between text-[11px] font-mono text-[#7c7770]">
           <span>Studio Mode</span>

@@ -1,6 +1,3 @@
-"use server";
-
-import { revalidatePath } from "next/cache";
 import {
   createPlaybook,
   updatePlaybook,
@@ -60,7 +57,6 @@ export async function createPlaybookAction(formData: FormData) {
       ],
     });
 
-    revalidatePath("/playbooks");
     return { success: true, slug: playbook.slug };
   } catch (error) {
     console.error("Error creating playbook:", error);
@@ -83,8 +79,6 @@ export async function updatePlaybookContentAction(
       ...(meta?.tags ? { tags: meta.tags } : {}),
     });
 
-    revalidatePath(`/playbooks/${slug}`);
-    revalidatePath("/playbooks");
     return { success: true, playbook: updated };
   } catch (error) {
     console.error("Error updating playbook content:", error);
@@ -95,7 +89,6 @@ export async function updatePlaybookContentAction(
 export async function deletePlaybookAction(slug: string) {
   try {
     await deletePlaybook(slug);
-    revalidatePath("/playbooks");
     return { success: true };
   } catch (error) {
     console.error("Error deleting playbook:", error);

@@ -1,6 +1,3 @@
-"use server";
-
-import { revalidatePath } from "next/cache";
 import {
   createNextAction,
   updateNextAction,
@@ -9,10 +6,6 @@ import {
 import type { ActionPriority, ActionStatus } from "@/lib/data/types";
 
 function revalidateActionSurfaces() {
-  revalidatePath("/dashboard");
-  revalidatePath("/actions");
-  revalidatePath("/inbox");
-  revalidatePath("/");
 }
 
 export async function createActionHandler(formData: FormData) {

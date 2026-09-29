@@ -24,6 +24,9 @@ interface PlaybooksListProps {
 
 export function PlaybooksList({ initialPlaybooks }: PlaybooksListProps) {
   const [playbooks, setPlaybooks] = useState<Playbook[]>(initialPlaybooks);
+  React.useEffect(() => {
+    setPlaybooks(initialPlaybooks);
+  }, [initialPlaybooks]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedRegion, setSelectedRegion] = useState<string>("all");
