@@ -76,11 +76,18 @@ export async function getLinkState(): Promise<LinkState> {
   return { supported: true, linked: true, permission, lastSync: last, folder: handle.name };
 }
 
-/** Write every store file into the folder. Screenshots are dropped: Claude only needs the text. */
+/** Write every store file into the folder. Images are dropped: Claude only needs the text. */
 export async function writeSnapshot(dir: FileSystemDirectoryHandle): Promise<void> {
   for (const name of STORE_FILES) {
     let rows = await readJsonFile<any[]>(name, []);
     if (name === "captures.json") rows = rows.map((r) => ({ ...r, screenshots: undefined }));
+    // SOPs and client notes embed screenshots as image blocks. Claude reads text, so drop the pixels.
+    if (name === "playbooks.json" || name === "clients.json") {
+      rows = rows.map((r) => ({
+        ...r,
+        content: Array.isArray(r.content) ? r.content.map((b: any) => (b?.type === "image" ? { ...b, url: undefined } : b)) : r.content,
+      }));
+    }
     const file = await dir.getFileHandle(name, { create: true });
     const w = await file.createWritable();
     await w.write(JSON.stringify(rows, null, 2));
