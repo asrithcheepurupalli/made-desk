@@ -123,6 +123,25 @@ export function CaptureCard({ capture }: { capture: Capture }) {
             </div>
           </div>
 
+          {/* Source quality: what did we actually read? */}
+          {capture.source_quality === "caption_only" && (
+            <div className="mb-3 p-2.5 border-2 border-[#c8102e] bg-[#fbe8eb] text-[11px] font-mono text-[#c8102e] leading-snug">
+              <strong>CAPTION ONLY.</strong> We could not read the video itself, so nothing below is from the spoken content.
+              {capture.quality_note ? ` ${capture.quality_note}` : ""} Watch it and paste the key points as a new note.
+            </div>
+          )}
+          {capture.source_quality === "full" && (
+            <div className="mb-3 inline-flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase text-[#16130f] bg-[#ede8df] border border-[#16130f] px-2 py-0.5">
+              <CheckCircle2 className="w-3 h-3 text-[#c8102e]" />
+              Full content read{capture.duration_seconds ? ` (${capture.duration_seconds}s video transcribed)` : ""}
+            </div>
+          )}
+          {capture.status === "failed" && capture.quality_note && (
+            <div className="mb-3 p-2.5 border-2 border-[#c8102e] bg-[#fbe8eb] text-[11px] font-mono text-[#c8102e]">
+              Could not read this link. {capture.quality_note}
+            </div>
+          )}
+
           {/* Source Link if present */}
           {capture.source_url && (
             <a

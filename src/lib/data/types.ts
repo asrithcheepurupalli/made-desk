@@ -1,5 +1,6 @@
 export type SourceType = "reel" | "youtube" | "web" | "note" | "whatsapp";
 export type CaptureStatus = "pending" | "processed" | "failed";
+export type SourceQuality = "full" | "caption_only" | "manual";
 export type SuggestedCategory = "playbook" | "client" | "action" | "general";
 
 export interface ExtractedInsight {
@@ -19,6 +20,9 @@ export interface Capture {
   suggested_category?: SuggestedCategory;
   screenshots?: string[];
   duration_seconds?: number;
+  /** How much real content we got: full = video transcribed, caption_only = only the post caption, manual = pasted by us */
+  source_quality?: SourceQuality;
+  quality_note?: string;
   processed_at?: string;
   created_at: string;
   updated_at: string;

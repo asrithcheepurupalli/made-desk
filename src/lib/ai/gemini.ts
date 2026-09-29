@@ -12,8 +12,14 @@ function getGeminiClient(): GoogleGenAI | null {
 
 export async function extractInsightsWithGemini(
   rawText: string,
-  sourceUrl?: string
+  sourceUrl?: string,
+  quality: "full" | "caption_only" | "manual" = "manual"
 ): Promise<ExtractionResult> {
+  if (quality === "caption_only") {
+    // Nothing real to analyse: never let a model pad a caption into fake insights.
+    return captionOnlyResult(rawText);
+  }
+
   const ai = getGeminiClient();
   if (!ai || !hasGemini()) {
     return mockExtractFromText(rawText, sourceUrl);
@@ -24,6 +30,7 @@ export async function extractInsightsWithGemini(
 Analyze this captured reel transcript / note:
 
 SOURCE URL: ${sourceUrl || "None"}
+SOURCE QUALITY: ${quality}
 CONTENT:
 """
 ${rawText}
@@ -276,4 +283,21 @@ At the end of your response, output a JSON block on a new line with cited source
       cited_sources: [],
     };
   }
+}
+
+
+function captionOnlyResult(caption: string): ExtractionResult {
+  const clean = caption.replace(/^CAPTION:\s*/i, "").replace(/\s+/g, " ").trim().slice(0, 300);
+  return {
+    summary: `Caption only: ${clean || "no caption text"}. The video itself was not transcribed, so no insights were extracted.`,
+    suggested_category: "general",
+    extracted_insights: [],
+    proposed_actions: [
+      {
+        title: "Watch the reel and paste the key points as a note",
+        description: "We could only read the caption, not the spoken content. Add the real steps by hand so they can become an SOP.",
+        priority: "medium",
+      },
+    ],
+  };
 }

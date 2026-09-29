@@ -3,12 +3,14 @@
 import { extractInsightsWithGemini } from "@/lib/ai/gemini";
 import { extractMediaFromUrl } from "@/lib/media/extractor";
 import type { ExtractionResult } from "@/lib/ai/mock";
-import type { SourceType } from "@/lib/data/types";
+import type { SourceType, SourceQuality } from "@/lib/data/types";
 
 export interface CaptureExtraction {
   transcript: string;
   screenshots: string[];
   durationSeconds?: number;
+  quality: SourceQuality | "none";
+  note?: string;
   extraction: ExtractionResult;
 }
 
@@ -23,29 +25,33 @@ export async function extractCaptureAction(input: {
   sourceType: SourceType;
 }): Promise<CaptureExtraction> {
   const { captureId, rawText, sourceUrl, sourceType } = input;
-  let transcript = rawText.trim();
+  const notes = rawText.trim();
+  let transcript = notes;
   let screenshots: string[] = [];
   let durationSeconds: number | undefined;
+  let quality: SourceQuality | "none" = notes ? "manual" : "none";
+  let note: string | undefined;
 
-  const isVideo =
-    sourceUrl &&
-    (sourceType === "reel" ||
-      sourceType === "youtube" ||
-      sourceUrl.includes("instagram.com") ||
-      sourceUrl.includes("youtube.com") ||
-      sourceUrl.includes("youtu.be"));
-
-  if (isVideo) {
+  if (sourceUrl) {
     try {
-      const media = await extractMediaFromUrl(sourceUrl!, captureId);
-      if (media.transcript?.trim()) transcript = media.transcript;
-      if (media.screenshots?.length) screenshots = media.screenshots;
-      if (media.durationSeconds) durationSeconds = media.durationSeconds;
+      const media = await extractMediaFromUrl(sourceUrl, captureId);
+      screenshots = media.screenshots;
+      durationSeconds = media.durationSeconds;
+      note = media.note;
+      if (media.transcript.trim()) {
+        // Our own notes go first and count as real content
+        transcript = notes ? `NOTES:\n${notes}\n\n${media.transcript}` : media.transcript;
+        quality = media.quality === "full" ? "full" : notes ? "manual" : media.quality;
+      }
     } catch (err) {
       console.warn("Media extraction warning:", err);
+      note = "Extraction failed.";
     }
   }
 
-  const extraction = await extractInsightsWithGemini(transcript || `Content from ${sourceUrl}`, sourceUrl);
-  return { transcript, screenshots, durationSeconds, extraction };
+  const extraction =
+    quality === "none"
+      ? await extractInsightsWithGemini(transcript || `Content from ${sourceUrl}`, sourceUrl, "caption_only")
+      : await extractInsightsWithGemini(transcript, sourceUrl, quality);
+  return { transcript, screenshots, durationSeconds, quality, note, extraction };
 }

@@ -34,6 +34,15 @@ export async function processCaptureAction(formData: FormData) {
     });
     const { extraction } = result;
 
+    if (result.quality === "none" && !result.transcript.trim()) {
+      await updateCapture(capture.id, {
+        status: "failed",
+        quality_note: result.note || "Nothing could be read from this link.",
+        screenshots: result.screenshots.length > 0 ? result.screenshots : undefined,
+      });
+      return { error: `Could not read any content from that link. ${result.note || ""} Paste the transcript as a note instead.`.trim() };
+    }
+
     // 3. Save the results locally
     await updateCapture(capture.id, {
       raw_text: result.transcript || rawText.trim(),
@@ -43,6 +52,8 @@ export async function processCaptureAction(formData: FormData) {
       suggested_category: extraction.suggested_category,
       screenshots: result.screenshots.length > 0 ? result.screenshots : undefined,
       duration_seconds: result.durationSeconds,
+      source_quality: result.quality === "none" ? "caption_only" : result.quality,
+      quality_note: result.quality === "caption_only" ? result.note : undefined,
       processed_at: new Date().toISOString(),
     });
 

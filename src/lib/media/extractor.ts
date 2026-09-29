@@ -43,9 +43,15 @@ async function getFfprobePath(): Promise<string> {
 }
 
 export interface MediaExtractionResult {
+  /** Combined, labelled text handed to the AI: caption, spoken transcript, on-screen text */
   transcript: string;
+  caption: string;
+  spoken: string;
+  onScreenText: string;
   screenshots: string[];
   durationSeconds?: number;
+  quality: "full" | "caption_only" | "none";
+  note?: string;
 }
 
 /**
@@ -241,178 +247,207 @@ export async function persistImages(images: string[], max = 4): Promise<string[]
   return out.filter((x): x is string => Boolean(x));
 }
 
+const MAX_INLINE_VIDEO_BYTES = 18 * 1024 * 1024;
+
+/** Locate yt-dlp, or fetch the standalone Linux build into /tmp (serverless has none). */
+async function ensureYtDlp(): Promise<string | null> {
+  const found = await getYtDlpPath();
+  if (found !== "yt-dlp") return found;
+  try {
+    await execFileAsync("yt-dlp", ["--version"], { timeout: 5000 });
+    return "yt-dlp";
+  } catch {}
+
+  if (process.platform !== "linux") return null;
+  const target = "/tmp/yt-dlp";
+  try {
+    await fs.access(target);
+    return target;
+  } catch {}
+  try {
+    const res = await fetch("https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux", {
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!res.ok) return null;
+    await fs.writeFile(target, Buffer.from(await res.arrayBuffer()));
+    await fs.chmod(target, 0o755);
+    return target;
+  } catch (err) {
+    console.warn("[made. desk] Could not fetch yt-dlp:", err);
+    return null;
+  }
+}
+
+/** Ask Gemini to transcribe speech and read on-screen text from a video or audio file. */
+async function transcribeWithGemini(
+  buf: Buffer,
+  mimeType: string
+): Promise<{ spoken: string; onScreen: string } | null> {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!apiKey) return null;
+  try {
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text:
+                "Transcribe every word spoken in this media verbatim, do not summarize or add anything. " +
+                "Then list all on-screen text exactly as shown, in order, one line each. " +
+                "If there is no speech or no on-screen text, write NONE for that section. " +
+                "Use exactly this format:\nSPOKEN:\n...\nON-SCREEN TEXT:\n...",
+            },
+            { inlineData: { mimeType, data: buf.toString("base64") } },
+          ],
+        },
+      ],
+      config: { temperature: 0, thinkingConfig: { thinkingBudget: 0 } },
+    });
+    const text = (response.text || "").trim();
+    if (!text) return null;
+    const spokenMatch = text.match(/SPOKEN:\s*([\s\S]*?)(?:\n\s*ON-SCREEN TEXT:|$)/i);
+    const screenMatch = text.match(/ON-SCREEN TEXT:\s*([\s\S]*)$/i);
+    const clean = (v?: string) => {
+      const t = (v || "").trim();
+      return /^NONE\.?$/i.test(t) ? "" : t;
+    };
+    return { spoken: clean(spokenMatch?.[1]), onScreen: clean(screenMatch?.[1]) };
+  } catch (err) {
+    console.warn("[made. desk] Gemini transcription failed:", err);
+    return null;
+  }
+}
+
 export async function extractMediaFromUrl(
   url: string,
   captureId: string
 ): Promise<MediaExtractionResult> {
   const cleanUrl = url.split("?")[0].replace(/\/$/, "");
-  let transcript = "";
+  const isInstagram = url.includes("instagram.com");
+  let caption = "";
+  let spoken = "";
+  let onScreenText = "";
   let screenshots: string[] = [];
-  let durationSeconds: number | undefined = undefined;
+  let durationSeconds: number | undefined;
+  const notes: string[] = [];
 
-  const isInstagram = url.includes("instagram.com") || url.includes("/p/") || url.includes("/reel/");
-
-  // 1. If Instagram, immediately fetch the direct public embed (fastest and most reliable)
+  // 1. Caption + cover image. This is only the post text, NOT the video content.
   if (isInstagram) {
-    const embedData = await fetchInstagramEmbed(cleanUrl);
-    if (embedData.text && embedData.text.length > 10) {
-      transcript = embedData.text;
-    }
-    if (embedData.images.length > 0) {
-      screenshots = embedData.images;
-    }
+    const embed = await fetchInstagramEmbed(cleanUrl);
+    caption = embed.text;
+    screenshots = embed.images;
+  } else {
+    // Articles and other pages: the page text is the content
+    const web = await fetchWebUrlContent(cleanUrl);
+    if (web.text.trim()) spoken = web.text.trim();
+    screenshots = web.images;
   }
 
-  // 2. If transcript is still empty, try Jina web reader
-  if (!transcript || transcript.trim().length === 0) {
-    const webData = await fetchWebUrlContent(cleanUrl);
-    if (webData.text && webData.text.trim().length > 0) {
-      transcript = webData.text;
-    }
-    if (screenshots.length === 0 && webData.images.length > 0) {
-      screenshots = webData.images;
-    }
-  }
+  // 2. The real content: download the video and transcribe speech + on-screen text
+  if (isInstagram || /youtube\.com|youtu\.be|tiktok\.com/.test(url)) {
+    const ytDlp = await ensureYtDlp();
+    if (!ytDlp) {
+      notes.push("Video downloader unavailable on this server.");
+    } else {
+      const tmpDir = path.join("/tmp", "made-desk-media", captureId);
+      try {
+        await fs.mkdir(tmpDir, { recursive: true });
+        await execFileAsync(
+          ytDlp,
+          ["-f", "b[ext=mp4]/b/best", "-o", path.join(tmpDir, "video.%(ext)s"), "--no-playlist", "--no-warnings", "--quiet", cleanUrl],
+          { timeout: 45000, maxBuffer: 10 * 1024 * 1024 }
+        );
+        const files = await fs.readdir(tmpDir);
+        const videoFile = files.find((f) => f.startsWith("video."));
+        if (!videoFile) {
+          notes.push("No video found in this post (it may be an image carousel).");
+        } else {
+          const videoPath = path.join(tmpDir, videoFile);
+          const ffmpeg = await getFfmpegPath();
+          const ffprobe = await getFfprobePath();
 
-  // 3. If local binaries (yt-dlp + ffmpeg) are available, attempt local video & audio transcription
-  if (!transcript || screenshots.length === 0) {
-    const ytDlp = await getYtDlpPath();
-    const ffmpeg = await getFfmpegPath();
-    const ffprobe = await getFfprobePath();
+          try {
+            const { stdout } = await execFileAsync(
+              ffprobe,
+              ["-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", videoPath],
+              { timeout: 10000 }
+            );
+            const d = parseFloat(stdout.trim());
+            if (!isNaN(d) && d > 0) durationSeconds = Math.round(d);
+          } catch {}
 
-    const tmpDir = path.join("/tmp", "made-desk-media", captureId);
-    const publicDir = path.join(process.cwd(), "public", "captures", captureId);
+          // Keyframes when ffmpeg exists (local); otherwise the cover image stays
+          if (ffmpeg !== "ffmpeg" || (await execFileAsync(ffmpeg, ["-version"], { timeout: 5000 }).then(() => true, () => false))) {
+            try {
+              const shots = path.join(tmpDir, "frame_%02d.jpg");
+              const every = Math.max(1, Math.round((durationSeconds || 30) / 4));
+              await execFileAsync(ffmpeg, ["-y", "-i", videoPath, "-vf", `fps=1/${every},scale=720:-1`, "-vframes", "5", shots], { timeout: 30000 });
+              const frames = (await fs.readdir(tmpDir)).filter((f) => f.startsWith("frame_")).sort();
+              const inlined: string[] = [];
+              for (const f of frames) {
+                const b = await fs.readFile(path.join(tmpDir, f));
+                inlined.push(`data:image/jpeg;base64,${b.toString("base64")}`);
+              }
+              if (inlined.length) screenshots = inlined;
+            } catch {}
+          }
 
-    try {
-      await fs.mkdir(tmpDir, { recursive: true });
-      await fs.mkdir(publicDir, { recursive: true }).catch(() => {});
-
-      const videoPattern = path.join(tmpDir, "video.%(ext)s");
-      const audioPath = path.join(tmpDir, "audio.mp3");
-
-      await execFileAsync(ytDlp, [
-        "-f",
-        "b[ext=mp4]/b/best",
-        "-o",
-        videoPattern,
-        "--no-playlist",
-        "--no-warnings",
-        "--quiet",
-        url,
-      ]);
-
-      const files = await fs.readdir(tmpDir);
-      const videoFile = files.find((f) => f.startsWith("video.") && !f.endsWith(".mp3"));
-
-      if (videoFile) {
-        const videoPath = path.join(tmpDir, videoFile);
-
-        // Duration
-        let duration = 30;
-        try {
-          const { stdout } = await execFileAsync(ffprobe, [
-            "-v",
-            "error",
-            "-show_entries",
-            "format=duration",
-            "-of",
-            "default=noprint_wrappers=1:nokey=1",
-            videoPath,
-          ]);
-          const parsed = parseFloat(stdout.trim());
-          if (!isNaN(parsed) && parsed > 0) duration = parsed;
-        } catch {}
-        durationSeconds = Math.round(duration);
-
-        // Audio extract
-        try {
-          await execFileAsync(ffmpeg, [
-            "-y",
-            "-i",
-            videoPath,
-            "-vn",
-            "-ar",
-            "44100",
-            "-ac",
-            "2",
-            "-b:a",
-            "128k",
-            audioPath,
-          ]);
-        } catch {}
-
-        // Keyframes extract
-        const frameRate = Math.max(1, Math.round(duration / 4));
-        const screenshotPattern = path.join(publicDir, "frame_%02d.jpg");
-        try {
-          await execFileAsync(ffmpeg, [
-            "-y",
-            "-i",
-            videoPath,
-            "-vf",
-            `fps=1/${frameRate},scale=720:-1`,
-            "-vframes",
-            "5",
-            screenshotPattern,
-          ]);
-        } catch {}
-
-        const publicFiles = await fs.readdir(publicDir).catch(() => []);
-        const localShots = publicFiles
-          .filter((f) => f.endsWith(".jpg") || f.endsWith(".png"))
-          .sort()
-          .map((f) => `/captures/${captureId}/${f}`);
-
-        if (localShots.length > 0) {
-          screenshots = localShots;
-        }
-
-        // Gemini audio transcription
-        const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-        if (apiKey && (await fs.access(audioPath).then(() => true).catch(() => false))) {
-          const audioBuffer = await fs.readFile(audioPath);
-          const base64Audio = audioBuffer.toString("base64");
-          const ai = new GoogleGenAI({ apiKey });
-          const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: [
-              {
-                role: "user",
-                parts: [
-                  {
-                    text: `Transcribe all spoken dialogue and tactical advice in this audio clip verbatim. Do not summarize.`,
-                  },
-                  {
-                    inlineData: {
-                      mimeType: "audio/mp3",
-                      data: base64Audio,
-                    },
-                  },
-                ],
-              },
-            ],
-            config: { temperature: 0.1 },
-          });
-          if (response.text && response.text.trim().length > 0) {
-            transcript = response.text.trim();
+          // Transcribe: send the video itself when small enough, else just the audio track
+          let result: { spoken: string; onScreen: string } | null = null;
+          const stat = await fs.stat(videoPath);
+          if (stat.size <= MAX_INLINE_VIDEO_BYTES) {
+            result = await transcribeWithGemini(await fs.readFile(videoPath), "video/mp4");
+          } else {
+            try {
+              const audio = path.join(tmpDir, "audio.mp3");
+              await execFileAsync(ffmpeg, ["-y", "-i", videoPath, "-vn", "-ar", "16000", "-ac", "1", "-b:a", "48k", audio], { timeout: 60000 });
+              result = await transcribeWithGemini(await fs.readFile(audio), "audio/mp3");
+            } catch {
+              notes.push("Video too large to transcribe here.");
+            }
+          }
+          if (result) {
+            spoken = result.spoken;
+            onScreenText = result.onScreen;
+          } else if (!notes.length) {
+            notes.push("Transcription failed. Check that GEMINI_API_KEY is set.");
           }
         }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        notes.push(
+          /login|rate-limit|429|403|unavailable/i.test(msg)
+            ? "Instagram blocked the video download from this server."
+            : "Could not download the video."
+        );
+      } finally {
+        await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
       }
-    } catch (localErr) {
-      // Ignore local ffmpeg errors if we already got web data
-    } finally {
-      try {
-        await fs.rm(tmpDir, { recursive: true, force: true });
-      } catch {}
     }
   }
 
-  // Inline remote images so they never expire or get hotlink-blocked
+  // 3. Inline images so they never expire or get hotlink-blocked
   screenshots = await persistImages(screenshots);
 
+  // A long caption (a written list or post) is itself the content, not just a hook
+  const substantiveCaption = caption.trim().length >= 400;
+  const hasReal = Boolean(spoken.trim() || onScreenText.trim() || substantiveCaption);
+  const parts: string[] = [];
+  if (caption.trim()) parts.push(`CAPTION:\n${caption.trim()}`);
+  if (spoken.trim()) parts.push(`${isInstagram || /youtu|tiktok/.test(url) ? "SPOKEN TRANSCRIPT" : "PAGE TEXT"}:\n${spoken.trim()}`);
+  if (onScreenText.trim()) parts.push(`ON-SCREEN TEXT:\n${onScreenText.trim()}`);
+
   return {
-    transcript,
+    transcript: parts.join("\n\n"),
+    caption,
+    spoken,
+    onScreenText,
     screenshots,
     durationSeconds,
+    quality: hasReal ? "full" : caption.trim() ? "caption_only" : "none",
+    note: hasReal ? undefined : notes[0],
   };
 }
