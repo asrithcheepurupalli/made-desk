@@ -1,5 +1,6 @@
 import React from "react";
 import { requireStudioAccess } from "@/lib/studio-access";
+import { isEphemeralStorage } from "@/lib/supabase/server";
 import { DashboardShell } from "@/components/DashboardShell";
 
 export default async function DashboardLayout({
@@ -9,5 +10,5 @@ export default async function DashboardLayout({
 }) {
   await requireStudioAccess();
 
-  return <DashboardShell>{children}</DashboardShell>;
+  return <DashboardShell ephemeral={isEphemeralStorage()}>{children}</DashboardShell>;
 }

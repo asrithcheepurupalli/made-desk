@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase/server";
+import { supabaseAdmin, must } from "@/lib/supabase/server";
 import { readJsonFile, writeJsonFile } from "@/lib/supabase/filestore";
 import { SEED_ACTIONS } from "./seeds";
 import type { NextAction } from "./types";
@@ -12,7 +12,8 @@ export async function listNextActions(): Promise<NextAction[]> {
       .from("next_actions")
       .select("*")
       .order("created_at", { ascending: false });
-    if (!error && data) return data as NextAction[];
+    must({ error }, "list actions");
+    return (data ?? []) as NextAction[];
   }
 
   const items = await readJsonFile<NextAction[]>(FILENAME, []);
@@ -27,7 +28,8 @@ export async function getNextAction(id: string): Promise<NextAction | null> {
       .select("*")
       .eq("id", id)
       .maybeSingle();
-    if (!error && data) return data as NextAction;
+    must({ error }, "get action");
+    return (data as NextAction) ?? null;
   }
 
   const items = await listNextActions();
@@ -54,7 +56,7 @@ export async function createNextAction(
 
   const sb = supabaseAdmin();
   if (sb) {
-    await sb.from("next_actions").insert([action]);
+    must(await sb.from("next_actions").insert([action]), "action insert");
   } else {
     const items = await listNextActions();
     items.unshift(action);
@@ -77,7 +79,8 @@ export async function updateNextAction(
       .eq("id", id)
       .select()
       .maybeSingle();
-    if (!error && data) return data as NextAction;
+    must({ error }, "action update");
+    return (data as NextAction) ?? null;
   }
 
   const items = await listNextActions();
@@ -91,8 +94,8 @@ export async function updateNextAction(
 export async function deleteNextAction(id: string): Promise<boolean> {
   const sb = supabaseAdmin();
   if (sb) {
-    const { error } = await sb.from("next_actions").delete().eq("id", id);
-    return !error;
+    must(await sb.from("next_actions").delete().eq("id", id), "action delete");
+    return true;
   }
   const items = await listNextActions();
   const filtered = items.filter((a) => a.id !== id);
@@ -103,8 +106,8 @@ export async function deleteNextAction(id: string): Promise<boolean> {
 export async function deleteActionsByCaptureId(captureId: string): Promise<boolean> {
   const sb = supabaseAdmin();
   if (sb) {
-    const { error } = await sb.from("next_actions").delete().eq("source_capture_id", captureId);
-    return !error;
+    must(await sb.from("next_actions").delete().eq("source_capture_id", captureId), "actions cascade delete");
+    return true;
   }
   const items = await listNextActions();
   const filtered = items.filter((a) => a.source_capture_id !== captureId);

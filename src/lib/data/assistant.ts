@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase/server";
+import { supabaseAdmin, must } from "@/lib/supabase/server";
 import { readJsonFile, writeJsonFile } from "@/lib/supabase/filestore";
 import type { AssistantMessage } from "./types";
 
@@ -12,7 +12,8 @@ export async function listAssistantMessages(sessionId = "default"): Promise<Assi
       .select("*")
       .eq("session_id", sessionId)
       .order("created_at", { ascending: true });
-    if (!error && data) return data as AssistantMessage[];
+    must({ error }, "list messages");
+    return (data ?? []) as AssistantMessage[];
   }
 
   const items = await readJsonFile<AssistantMessage[]>(FILENAME, []);
@@ -34,7 +35,7 @@ export async function createAssistantMessage(
 
   const sb = supabaseAdmin();
   if (sb) {
-    await sb.from("assistant_messages").insert([message]);
+    must(await sb.from("assistant_messages").insert([message]), "message insert");
   } else {
     const items = await readJsonFile<AssistantMessage[]>(FILENAME, []);
     items.push(message);
@@ -47,7 +48,7 @@ export async function createAssistantMessage(
 export async function clearAssistantSession(sessionId = "default"): Promise<void> {
   const sb = supabaseAdmin();
   if (sb) {
-    await sb.from("assistant_messages").delete().eq("session_id", sessionId);
+    must(await sb.from("assistant_messages").delete().eq("session_id", sessionId), "message clear");
     return;
   }
   const items = await readJsonFile<AssistantMessage[]>(FILENAME, []);

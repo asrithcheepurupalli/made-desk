@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase/server";
+import { supabaseAdmin, must, slugOrIdFilter } from "@/lib/supabase/server";
 import { readJsonFile, writeJsonFile } from "@/lib/supabase/filestore";
 import { SEED_PLAYBOOKS } from "./seeds";
 import type { Playbook } from "./types";
@@ -12,7 +12,8 @@ export async function listPlaybooks(): Promise<Playbook[]> {
       .from("playbooks")
       .select("*")
       .order("created_at", { ascending: false });
-    if (!error && data) return data as Playbook[];
+    must({ error }, "list playbooks");
+    return (data ?? []) as Playbook[];
   }
 
   const items = await readJsonFile<Playbook[]>(FILENAME, []);
@@ -26,9 +27,11 @@ export async function getPlaybookBySlug(slug: string): Promise<Playbook | null> 
     const { data, error } = await sb
       .from("playbooks")
       .select("*")
-      .or(`slug.eq.${cleanSlug},id.eq.${cleanSlug}`)
+      .or(slugOrIdFilter(cleanSlug))
+      .limit(1)
       .maybeSingle();
-    if (!error && data) return data as Playbook;
+    must({ error }, "get playbook");
+    return (data as Playbook) ?? null;
   }
 
   const items = await listPlaybooks();
@@ -63,7 +66,7 @@ export async function createPlaybook(
 
   const sb = supabaseAdmin();
   if (sb) {
-    await sb.from("playbooks").insert([playbook]);
+    must(await sb.from("playbooks").insert([playbook]), "playbook insert");
   } else {
     const items = await listPlaybooks();
     items.unshift(playbook);
@@ -84,10 +87,11 @@ export async function updatePlaybook(
     const { data, error } = await sb
       .from("playbooks")
       .update({ ...patch, updated_at: now })
-      .or(`slug.eq.${cleanSlug},id.eq.${cleanSlug}`)
+      .or(slugOrIdFilter(cleanSlug))
       .select()
       .maybeSingle();
-    if (!error && data) return data as Playbook;
+    must({ error }, "playbook update");
+    return (data as Playbook) ?? null;
   }
 
   const items = await listPlaybooks();
@@ -102,11 +106,8 @@ export async function deletePlaybook(slug: string): Promise<boolean> {
   const cleanSlug = decodeURIComponent(slug).toLowerCase().trim();
   const sb = supabaseAdmin();
   if (sb) {
-    const { error } = await sb
-      .from("playbooks")
-      .delete()
-      .or(`slug.eq.${cleanSlug},id.eq.${cleanSlug}`);
-    return !error;
+    must(await sb.from("playbooks").delete().or(slugOrIdFilter(cleanSlug)), "playbook delete");
+    return true;
   }
   const items = await listPlaybooks();
   const filtered = items.filter((p) => p.slug.toLowerCase() !== cleanSlug && p.id !== cleanSlug);

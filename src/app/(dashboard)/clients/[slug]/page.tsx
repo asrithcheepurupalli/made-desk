@@ -1,4 +1,6 @@
 import React from "react";
+import { notFound } from "next/navigation";
+import { hasSupabase } from "@/lib/env";
 import { getClientBySlug, createClient } from "@/lib/data/clients";
 import { listNextActions } from "@/lib/data/actions";
 import { ClientWorkspaceView } from "./ClientWorkspaceView";
@@ -32,6 +34,8 @@ export default async function ClientDetailPage({ params }: PageProps) {
   let client = await getClientBySlug(slug);
 
   if (!client) {
+    // With a real database a missing record means deleted: never resurrect it.
+    if (hasSupabase()) notFound();
     const cleanName = decodeURIComponent(slug)
       .replace(/-[0-9]{4}$/, "")
       .replace(/-/g, " ");

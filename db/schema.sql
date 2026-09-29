@@ -12,6 +12,8 @@ create table if not exists public.captures (
   summary text,
   extracted_insights jsonb not null default '[]'::jsonb,
   suggested_category text,                  -- 'playbook' | 'client' | 'action' | 'general'
+  screenshots jsonb not null default '[]'::jsonb,
+  duration_seconds integer,
   processed_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -87,3 +89,8 @@ create table if not exists public.assistant_messages (
 alter table public.assistant_messages enable row level security;
 drop policy if exists "assistant_messages service role only" on public.assistant_messages;
 create policy "assistant_messages service role only" on public.assistant_messages using (false) with check (false);
+
+
+-- Migration for existing databases (safe to re-run)
+alter table public.captures add column if not exists screenshots jsonb not null default '[]'::jsonb;
+alter table public.captures add column if not exists duration_seconds integer;

@@ -1,4 +1,6 @@
 import React from "react";
+import { notFound } from "next/navigation";
+import { hasSupabase } from "@/lib/env";
 import { getPlaybookBySlug, createPlaybook } from "@/lib/data/playbooks";
 import { PlaybookEditorView } from "./PlaybookEditorView";
 
@@ -31,6 +33,8 @@ export default async function PlaybookDetailPage({ params }: PageProps) {
   let playbook = await getPlaybookBySlug(slug);
 
   if (!playbook) {
+    // With a real database a missing record means deleted: never resurrect it.
+    if (hasSupabase()) notFound();
     const cleanTitle = decodeURIComponent(slug)
       .replace(/-[0-9]{4}$/, "")
       .replace(/-/g, " ");

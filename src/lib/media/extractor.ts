@@ -202,6 +202,36 @@ export async function fetchWebUrlContent(url: string): Promise<{ text: string; i
   return { text: "", images: [] };
 }
 
+/**
+ * Instagram CDN URLs expire and block hotlinking, so we download each image
+ * server-side and inline it as a data URI. It then persists with the capture.
+ */
+export async function downloadImageAsDataUri(src: string): Promise<string | null> {
+  if (src.startsWith("data:") || src.startsWith("/")) return src;
+  try {
+    const res = await fetch(src, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+        "Accept": "image/avif,image/webp,image/jpeg,image/*;q=0.8",
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length === 0 || buf.length > 600_000) return null;
+    const type = (res.headers.get("content-type") || "image/jpeg").split(";")[0];
+    if (!type.startsWith("image/")) return null;
+    return `data:${type};base64,${buf.toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
+
+export async function persistImages(images: string[], max = 4): Promise<string[]> {
+  const out = await Promise.all(images.slice(0, max).map(downloadImageAsDataUri));
+  return out.filter((x): x is string => Boolean(x));
+}
+
 export async function extractMediaFromUrl(
   url: string,
   captureId: string
@@ -367,6 +397,9 @@ export async function extractMediaFromUrl(
       } catch {}
     }
   }
+
+  // Inline remote images so they never expire or get hotlink-blocked
+  screenshots = await persistImages(screenshots);
 
   return {
     transcript,

@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase/server";
+import { supabaseAdmin, must, slugOrIdFilter } from "@/lib/supabase/server";
 import { readJsonFile, writeJsonFile } from "@/lib/supabase/filestore";
 import { SEED_CLIENTS } from "./seeds";
 import type { Client } from "./types";
@@ -12,7 +12,8 @@ export async function listClients(): Promise<Client[]> {
       .from("clients")
       .select("*")
       .order("created_at", { ascending: false });
-    if (!error && data) return data as Client[];
+    must({ error }, "list clients");
+    return (data ?? []) as Client[];
   }
 
   const items = await readJsonFile<Client[]>(FILENAME, []);
@@ -26,9 +27,11 @@ export async function getClientBySlug(slug: string): Promise<Client | null> {
     const { data, error } = await sb
       .from("clients")
       .select("*")
-      .or(`slug.eq.${cleanSlug},id.eq.${cleanSlug}`)
+      .or(slugOrIdFilter(cleanSlug))
+      .limit(1)
       .maybeSingle();
-    if (!error && data) return data as Client;
+    must({ error }, "get client");
+    return (data as Client) ?? null;
   }
 
   const items = await listClients();
@@ -51,7 +54,8 @@ export async function getClientById(id: string): Promise<Client | null> {
       .select("*")
       .eq("id", id)
       .maybeSingle();
-    if (!error && data) return data as Client;
+    must({ error }, "get client");
+    return (data as Client) ?? null;
   }
 
   const items = await listClients();
@@ -79,7 +83,7 @@ export async function createClient(
 
   const sb = supabaseAdmin();
   if (sb) {
-    await sb.from("clients").insert([client]);
+    must(await sb.from("clients").insert([client]), "client insert");
   } else {
     const items = await listClients();
     items.unshift(client);
@@ -100,10 +104,11 @@ export async function updateClient(
     const { data, error } = await sb
       .from("clients")
       .update({ ...patch, updated_at: now })
-      .or(`slug.eq.${clean},id.eq.${clean}`)
+      .or(slugOrIdFilter(clean))
       .select()
       .maybeSingle();
-    if (!error && data) return data as Client;
+    must({ error }, "client update");
+    return (data as Client) ?? null;
   }
 
   const items = await listClients();
@@ -118,11 +123,8 @@ export async function deleteClient(slugOrId: string): Promise<boolean> {
   const clean = decodeURIComponent(slugOrId).toLowerCase().trim();
   const sb = supabaseAdmin();
   if (sb) {
-    const { error } = await sb
-      .from("clients")
-      .delete()
-      .or(`slug.eq.${clean},id.eq.${clean}`);
-    return !error;
+    must(await sb.from("clients").delete().or(slugOrIdFilter(clean)), "client delete");
+    return true;
   }
   const items = await listClients();
   const filtered = items.filter((c) => c.slug.toLowerCase() !== clean && c.id !== clean);

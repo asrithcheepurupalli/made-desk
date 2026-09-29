@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase/server";
+import { supabaseAdmin, must } from "@/lib/supabase/server";
 import { readJsonFile, writeJsonFile } from "@/lib/supabase/filestore";
 import { deleteActionsByCaptureId } from "./actions";
 import type { Capture } from "./types";
@@ -12,7 +12,8 @@ export async function listCaptures(): Promise<Capture[]> {
       .from("captures")
       .select("*")
       .order("created_at", { ascending: false });
-    if (!error && data) return data as Capture[];
+    must({ error }, "list captures");
+    return (data ?? []) as Capture[];
   }
   const items = await readJsonFile<Capture[]>(FILENAME, []);
   return items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -26,7 +27,8 @@ export async function getCapture(id: string): Promise<Capture | null> {
       .select("*")
       .eq("id", id)
       .maybeSingle();
-    if (!error && data) return data as Capture;
+    must({ error }, "get capture");
+    return (data as Capture) ?? null;
   }
   const items = await readJsonFile<Capture[]>(FILENAME, []);
   return items.find((c) => c.id === id) ?? null;
@@ -45,6 +47,8 @@ export async function createCapture(
     summary: input.summary,
     extracted_insights: input.extracted_insights || [],
     suggested_category: input.suggested_category || "general",
+    screenshots: input.screenshots,
+    duration_seconds: input.duration_seconds,
     processed_at: input.processed_at,
     created_at: now,
     updated_at: now,
@@ -52,7 +56,7 @@ export async function createCapture(
 
   const sb = supabaseAdmin();
   if (sb) {
-    await sb.from("captures").insert([capture]);
+    must(await sb.from("captures").insert([capture]), "capture insert");
   } else {
     const items = await readJsonFile<Capture[]>(FILENAME, []);
     items.unshift(capture);
@@ -75,7 +79,8 @@ export async function updateCapture(
       .eq("id", id)
       .select()
       .maybeSingle();
-    if (!error && data) return data as Capture;
+    must({ error }, "capture update");
+    return (data as Capture) ?? null;
   }
 
   const items = await readJsonFile<Capture[]>(FILENAME, []);
@@ -89,7 +94,7 @@ export async function updateCapture(
 export async function deleteCapture(id: string): Promise<boolean> {
   const sb = supabaseAdmin();
   if (sb) {
-    await sb.from("captures").delete().eq("id", id);
+    must(await sb.from("captures").delete().eq("id", id), "capture delete");
   } else {
     const items = await listCaptures();
     const filtered = items.filter((c) => c.id !== id);
