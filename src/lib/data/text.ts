@@ -1,4 +1,4 @@
-import type { Playbook, Client, Capture } from "./types";
+import type { Playbook, Client, Capture, MasterSop } from "./types";
 
 /** Flatten inline text for both our editor blocks and BlockNote-style blocks. */
 function inlineText(b: any): string {
@@ -69,4 +69,16 @@ export function captureToMarkdown(c: Capture, opts: { transcript?: boolean } = {
   ].filter(Boolean);
   if (opts.transcript) lines.push("", "transcript:", c.raw_text);
   return lines.join("\n");
+}
+
+export function masterToMarkdown(m: MasterSop, sourceTitles: string[]): string {
+  return [
+    `## MASTER: ${m.title}`,
+    `slug: ${m.slug} | v${m.version} | category: ${m.category} | region: ${m.region} | merged from ${m.source_playbook_ids.length} SOPs: ${sourceTitles.join("; ")}`,
+    m.changelog[0] ? `last change: ${m.changelog[0].summary}` : "",
+    "",
+    blocksToMarkdown(m.content),
+  ]
+    .filter((l, i) => l !== "" || i === 3)
+    .join("\n");
 }

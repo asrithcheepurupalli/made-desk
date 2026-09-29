@@ -14,6 +14,8 @@ interface DashboardShellProps {
 export function DashboardShell({ children }: DashboardShellProps) {
   React.useEffect(() => {
     requestPersistentStorage();
+    // Catch up: merge any new overlapping SOPs (cheap no-op when nothing changed)
+    import("@/lib/masters/sync").then((m) => m.scheduleMasterSync(2500)).catch(() => {});
   }, []);
 
   const [isQuickCaptureOpen, setIsQuickCaptureOpen] = useState(false);
@@ -101,12 +103,16 @@ export function DashboardShell({ children }: DashboardShellProps) {
                   <kbd className="px-2 py-0.5 bg-white border border-[#16130f] font-bold">4</kbd>
                 </div>
                 <div className="flex items-center justify-between p-2 bg-[#f6f3ee] border border-[#16130f]">
-                  <span>Client Workspace</span>
+                  <span>Master SOPs</span>
                   <kbd className="px-2 py-0.5 bg-white border border-[#16130f] font-bold">5</kbd>
                 </div>
                 <div className="flex items-center justify-between p-2 bg-[#f6f3ee] border border-[#16130f]">
-                  <span>Grounded AI Assistant</span>
+                  <span>Client Workspace</span>
                   <kbd className="px-2 py-0.5 bg-white border border-[#16130f] font-bold">6</kbd>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-[#f6f3ee] border border-[#16130f]">
+                  <span>Grounded AI Assistant</span>
+                  <kbd className="px-2 py-0.5 bg-white border border-[#16130f] font-bold">7</kbd>
                 </div>
                 <div className="flex items-center justify-between p-2 bg-[#f6f3ee] border border-[#16130f]">
                   <span>Keyboard Shortcuts Help</span>

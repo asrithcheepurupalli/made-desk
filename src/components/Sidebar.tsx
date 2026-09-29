@@ -10,6 +10,7 @@ import {
   Inbox,
   CheckSquare,
   BookOpen,
+  Layers,
   Users,
   Bot,
   Plus,
@@ -51,16 +52,22 @@ export function Sidebar({ onOpenQuickCapture }: SidebarProps) {
       shortcut: "4",
     },
     {
+      href: "/masters",
+      label: "Master SOPs",
+      icon: Layers,
+      shortcut: "5",
+    },
+    {
       href: "/clients",
       label: "Client Workspace",
       icon: Users,
-      shortcut: "5",
+      shortcut: "6",
     },
     {
       href: "/assistant",
       label: "Grounded AI",
       icon: Bot,
-      shortcut: "6",
+      shortcut: "7",
     },
   ];
 
@@ -84,8 +91,9 @@ export function Sidebar({ onOpenQuickCapture }: SidebarProps) {
       if (e.key === "2") router.push("/inbox");
       if (e.key === "3") router.push("/actions");
       if (e.key === "4") router.push("/playbooks");
-      if (e.key === "5") router.push("/clients");
-      if (e.key === "6") router.push("/assistant");
+      if (e.key === "5") router.push("/masters");
+      if (e.key === "6") router.push("/clients");
+      if (e.key === "7") router.push("/assistant");
     }
 
     window.addEventListener("keydown", handleKeyDown);

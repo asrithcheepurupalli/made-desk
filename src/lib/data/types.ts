@@ -112,3 +112,28 @@ export interface AssistantMessage {
   cited_sources: CitedSource[];
   created_at: string;
 }
+
+export interface MasterChange {
+  at: string;
+  summary: string;
+}
+
+/** One canonical SOP built by merging several overlapping playbooks. Auto-maintained. */
+export interface MasterSop {
+  id: string;
+  slug: string;
+  title: string;
+  summary: string;
+  category: PlaybookCategory;
+  region: Region;
+  tags: string[];
+  content: any[];
+  source_playbook_ids: string[];
+  /** Fingerprint of the member SOPs (ids + last edit) this version was built from */
+  source_stamp: string;
+  version: number;
+  changelog: MasterChange[];
+  merged_at: string;
+  created_at: string;
+  updated_at: string;
+}

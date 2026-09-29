@@ -1,7 +1,8 @@
 "use server";
 
 import { GoogleGenAI } from "@google/genai";
-import type { Playbook, Client, Capture, NextAction, ActionPriority } from "@/lib/data/types";
+import type { Playbook, Client, Capture, NextAction, ActionPriority, MasterSop } from "@/lib/data/types";
+import { blocksToMarkdown } from "@/lib/data/text";
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -28,6 +29,7 @@ export interface WorkspaceSnapshot {
   clients: Client[];
   captures: Capture[];
   actions: NextAction[];
+  masters?: MasterSop[];
 }
 
 export async function askAssistantServerAction(
@@ -44,9 +46,15 @@ export async function askAssistantServerAction(
 
   try {
     const { playbooks, clients, captures, actions } = snapshot;
+    const masters = snapshot.masters || [];
+    const mergedIds = new Set(masters.flatMap((m) => m.source_playbook_ids));
+    const mastersContext = masters
+      .map((m) => `[MASTER SOP: ${m.title}] (Slug: ${m.slug}, merged from ${m.source_playbook_ids.length} SOPs)\n${blocksToMarkdown(m.content)}`)
+      .join("\n\n---\n\n");
 
     // Format Playbooks
     const playbooksContext = playbooks
+      .filter((p) => !mergedIds.has(p.id))
       .map((p) => {
         const textContent = Array.isArray(p.content)
           ? p.content
@@ -104,6 +112,7 @@ STRICT OPERATIONAL GUIDELINES:
 1. Always speak as our studio agency team: use "we", "our studio", "our team", never use "I".
 2. Answer questions grounded in the provided agency knowledge base below.
 3. If an answer draws upon a playbook or client, explicitly cite them as markdown links:
+   - For master SOPs: [Master Title](/masters/slug)
    - For playbooks: [Playbook Title](/playbooks/slug)
    - For clients: [Client Name](/clients/slug)
    - For actions: [Next Actions Board](/actions)
@@ -111,7 +120,10 @@ STRICT OPERATIONAL GUIDELINES:
 5. Keep answers tactical, dense, clear, and immediately actionable for our founders and designers.
 6. When outlining step-by-step procedures, use numbered or bulleted lists so our founders can immediately execute them or convert them into a living Playbook SOP.
 
-=== STUDIO PLAYBOOKS & SOPS ===
+=== MASTER SOPS (canonical, merged from overlapping SOPs: prefer these) ===
+${mastersContext || "None yet."}
+
+=== OTHER STUDIO PLAYBOOKS & SOPS ===
 ${playbooksContext}
 
 === ACTIVE CLIENT WORKSPACES ===

@@ -5,6 +5,13 @@ import type { Playbook } from "./types";
 
 const FILENAME = "playbooks.json";
 
+/** New or edited SOPs may overlap with others: let the master pages catch up (browser only). */
+function pingMasters(delay: number) {
+  if (typeof window !== "undefined") {
+    import("@/lib/masters/sync").then((m) => m.scheduleMasterSync(delay)).catch(() => {});
+  }
+}
+
 export async function listPlaybooks(): Promise<Playbook[]> {
   const sb = supabaseAdmin();
   if (sb) {
@@ -70,6 +77,7 @@ export async function createPlaybook(
     await writeJsonFile(FILENAME, items);
   }
 
+  pingMasters(4000);
   return playbook;
 }
 
@@ -96,6 +104,7 @@ export async function updatePlaybook(
   if (idx === -1) return null;
   items[idx] = { ...items[idx], ...patch, updated_at: now };
   await writeJsonFile(FILENAME, items);
+  if (patch.content || patch.title) pingMasters(30000);
   return items[idx];
 }
 
@@ -109,5 +118,6 @@ export async function deletePlaybook(slug: string): Promise<boolean> {
   const items = await listPlaybooks();
   const filtered = items.filter((p) => p.slug.toLowerCase() !== cleanSlug && p.id !== cleanSlug);
   await writeJsonFile(FILENAME, filtered);
+  pingMasters(4000);
   return true;
 }

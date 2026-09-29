@@ -6,6 +6,7 @@ import { PageLoading } from "@/components/PageLoading";
 import { listNextActions } from "@/lib/data/actions";
 import { listCaptures } from "@/lib/data/captures";
 import { ActionsBoard } from "./ActionsBoard";
+import { TaskCleanup } from "./TaskCleanup";
 import { CheckSquare, AlertCircle, CheckCircle2, Clock } from "lucide-react";
 
 
@@ -68,6 +69,8 @@ export function ActionsPageClient() {
           </div>
         </div>
       </div>
+
+      <TaskCleanup openCount={actions.filter((a) => a.status !== "done").length} />
 
       {/* Main Board */}
       <ActionsBoard initialActions={actions} captures={captures} />

@@ -1,6 +1,7 @@
 import { listPlaybooks, createPlaybook } from "@/lib/data/playbooks";
 import { listClients } from "@/lib/data/clients";
 import { listCaptures } from "@/lib/data/captures";
+import { listMasters } from "@/lib/data/masters";
 import { listNextActions, createNextAction } from "@/lib/data/actions";
 import { askAssistantServerAction } from "./ai";
 import type { ChatMessage, AssistantResponse } from "./ai";
@@ -54,11 +55,12 @@ export async function askAssistantAction(
   history: ChatMessage[],
   userPrompt: string
 ): Promise<AssistantResponse> {
-  const [playbooks, clients, captures, actions] = await Promise.all([
+  const [playbooks, clients, captures, actions, masters] = await Promise.all([
     listPlaybooks(),
     listClients(),
     listCaptures(),
     listNextActions(),
+    listMasters(),
   ]);
 
   // Trim what we send: no screenshots, capped transcripts
@@ -73,6 +75,7 @@ export async function askAssistantAction(
     clients,
     captures: slimCaptures,
     actions: actions.slice(0, 30),
+    masters,
   });
 }
 

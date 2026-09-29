@@ -1,5 +1,5 @@
 import { createCapture, updateCapture, deleteCapture, getCapture } from "@/lib/data/captures";
-import { createNextAction } from "@/lib/data/actions";
+import { createNextAction, listNextActions } from "@/lib/data/actions";
 import { createPlaybook } from "@/lib/data/playbooks";
 import { extractCaptureAction } from "./extract";
 import { generateSopAction, type GeneratedSop } from "./sop";
@@ -58,8 +58,18 @@ export async function processCaptureAction(formData: FormData) {
       processed_at: new Date().toISOString(),
     });
 
-    // 4. Derive Next Actions
-    for (const act of extraction.proposed_actions || []) {
+    // 4. Derive Next Actions: at most 2, and never near-duplicates of open tasks
+    const tokens = (t: string) => new Set(t.toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter((w) => w.length > 2));
+    const similar = (a: string, b: string) => {
+      const x = tokens(a);
+      const y = tokens(b);
+      const inter = [...x].filter((w) => y.has(w)).length;
+      return inter / Math.max(1, Math.min(x.size, y.size)) >= 0.7;
+    };
+    const openTitles = (await listNextActions()).filter((a) => a.status !== "done").map((a) => a.title);
+    for (const act of (extraction.proposed_actions || []).slice(0, 2)) {
+      if (openTitles.some((t) => similar(t, act.title))) continue;
+      openTitles.push(act.title);
       await createNextAction({
         title: act.title,
         description: act.description,

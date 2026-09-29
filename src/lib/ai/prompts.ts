@@ -16,7 +16,7 @@ Guidelines:
 1. Extract the core essence into a crisp 1 to 2 sentence summary.
 2. Pull 2 to 5 distinct operational insights or tactical takeaways.
 3. Suggest a category for where this knowledge belongs: "playbook", "client", "action", or "general".
-4. Derive 1 to 4 concrete, immediately executable next actions with realistic priorities ("urgent", "high", "medium", "low").
+4. Derive 0 to 2 next actions, and ONLY if the content clearly calls for a specific one. Each must name a concrete object and a checkable outcome (for example "Send the 3-message ladder to the 5 stalled Dubai leads"). NEVER output generic filler such as "train the team", "review current templates", "integrate into workflow", "document in playbooks", "develop templates", or "research more": a saved SOP already covers those. If nothing specific is warranted, return an empty proposed_actions array.
 5. If the content teaches a reusable SOP or strategy (e.g., outreach steps, UAE client acquisition, onboarding protocol), generate a draft playbook title and structured content blocks.
 6. Absolutely NO em-dashes (—) or en-dashes (–). Use commas, colons, or standard periods instead.
 7. Speak in professional agency voice ("we / our studio").

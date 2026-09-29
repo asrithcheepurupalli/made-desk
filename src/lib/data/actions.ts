@@ -114,3 +114,22 @@ export async function deleteActionsByCaptureId(captureId: string): Promise<boole
   await writeJsonFile(FILENAME, filtered);
   return true;
 }
+
+/** Remove many tasks in one write (one storage update, one UI refresh). */
+export async function deleteNextActions(ids: string[]): Promise<number> {
+  const drop = new Set(ids);
+  const sb = supabaseAdmin();
+  if (sb) {
+    must(await sb.from("next_actions").delete().in("id", ids), "actions bulk delete");
+    return ids.length;
+  }
+  const items = await listNextActions();
+  const kept = items.filter((a) => !drop.has(a.id));
+  await writeJsonFile(FILENAME, kept);
+  return items.length - kept.length;
+}
+
+/** Replace the whole task list (used to undo a cleanup). */
+export async function replaceNextActions(list: NextAction[]): Promise<void> {
+  await writeJsonFile(FILENAME, list);
+}

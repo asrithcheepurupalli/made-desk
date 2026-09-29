@@ -18,6 +18,7 @@ export const STORE_FILES = [
   "clients.json",
   "actions.json",
   "assistant_messages.json",
+  "masters.json",
 ];
 
 const memoryStore = new Map<string, any>();
