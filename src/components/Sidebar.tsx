@@ -15,6 +15,8 @@ import {
   Users,
   Bot,
   Plus,
+  Send,
+  ArrowUpRight,
 } from "lucide-react";
 import { STUDIO } from "@/lib/brand";
 import { Wordmark } from "./Wordmark";
@@ -105,6 +107,7 @@ export function Sidebar({ onOpenQuickCapture, open = false, onClose }: SidebarPr
       if (e.key === "6") router.push("/clients");
       if (e.key === "7") router.push("/assistant");
       if (e.key === "8") router.push("/products");
+      if (e.key === "9") router.push("/outreach");
     }
 
     window.addEventListener("keydown", handleKeyDown);
@@ -139,6 +142,24 @@ export function Sidebar({ onOpenQuickCapture, open = false, onClose }: SidebarPr
               ⌘K
             </kbd>
           </button>
+        </div>
+
+        {/* The Outreach board is its own dashboard, so it leaves this shell */}
+        <div className="p-4 border-b-2 border-[#16130f]">
+          <Link
+            href="/outreach"
+            onClick={onClose}
+            className="w-full brutal-btn flex items-center justify-between text-xs py-2.5"
+          >
+            <span className="flex items-center gap-2">
+              <Send className="w-4 h-4 text-[#c8102e]" />
+              <span>Outreach Board</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <ArrowUpRight className="w-3.5 h-3.5" />
+              <kbd className="label text-[9px] bg-white text-[#16130f] px-1.5 py-0.5">9</kbd>
+            </span>
+          </Link>
         </div>
 
         {/* Navigation links */}

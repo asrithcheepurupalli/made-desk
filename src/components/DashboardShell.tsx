@@ -139,6 +139,10 @@ export function DashboardShell({ children }: DashboardShellProps) {
                   <kbd className="px-2 py-0.5 bg-white border border-[#16130f] font-bold">8</kbd>
                 </div>
                 <div className="flex items-center justify-between p-2 bg-[#f6f3ee] border border-[#16130f]">
+                  <span>Outreach Board</span>
+                  <kbd className="px-2 py-0.5 bg-white border border-[#16130f] font-bold">9</kbd>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-[#f6f3ee] border border-[#16130f]">
                   <span>Keyboard Shortcuts Help</span>
                   <kbd className="px-2 py-0.5 bg-white border border-[#16130f] font-bold">?</kbd>
                 </div>
