@@ -162,12 +162,12 @@ export function ActionsBoard({ initialActions, captures }: ActionsBoardProps) {
 
       {/* Filter Controls Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-3 border-2 border-[#16130f]">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Filter className="w-4 h-4 text-[#7c7770]" />
           <span className="label text-[#16130f]">Filters:</span>
 
           {/* Status Filter */}
-          <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center gap-1">
             {["all", "todo", "in_progress", "done", "snoozed"].map((st) => (
               <button
                 key={st}
@@ -247,7 +247,7 @@ export function ActionsBoard({ initialActions, captures }: ActionsBoardProps) {
                     )}
                   </button>
 
-                  <div className="space-y-1 flex-1">
+                  <div className="space-y-1 flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span
                         className={`font-sans text-sm font-bold transition-all ${

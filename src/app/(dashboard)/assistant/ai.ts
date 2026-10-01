@@ -1,8 +1,8 @@
 "use server";
 
 import { GoogleGenAI } from "@google/genai";
-import type { Playbook, Client, Capture, NextAction, ActionPriority, MasterSop } from "@/lib/data/types";
-import { blocksToMarkdown } from "@/lib/data/text";
+import type { Playbook, Client, Capture, NextAction, ActionPriority, MasterSop, Product } from "@/lib/data/types";
+import { blocksToMarkdown, productToMarkdown } from "@/lib/data/text";
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -30,6 +30,7 @@ export interface WorkspaceSnapshot {
   captures: Capture[];
   actions: NextAction[];
   masters?: MasterSop[];
+  products?: Product[];
 }
 
 export async function askAssistantServerAction(
@@ -119,6 +120,9 @@ STRICT OPERATIONAL GUIDELINES:
 4. HARD STYLE RULE: Never use em dashes (—) or en dashes (–). Use commas, colons, parentheses, or clean periods instead.
 5. Keep answers tactical, dense, clear, and immediately actionable for our founders and designers.
 6. When outlining step-by-step procedures, use numbered or bulleted lists so our founders can immediately execute them or convert them into a living Playbook SOP.
+
+=== PRODUCTS WE SHIPPED (made. products and Asrith's personal projects) ===
+${(snapshot.products || []).map((p) => productToMarkdown(p)).join("\n") || "None recorded."}
 
 === MASTER SOPS (canonical, merged from overlapping SOPs: prefer these) ===
 ${mastersContext || "None yet."}

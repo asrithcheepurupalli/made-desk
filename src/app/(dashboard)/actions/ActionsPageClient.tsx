@@ -44,7 +44,7 @@ export function ActionsPageClient() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="bg-white border-2 border-[#16130f] px-3.5 py-2 shadow-[2px_2px_0px_#16130f]">
               <div className="flex items-center gap-1">
                 <AlertCircle className="w-3.5 h-3.5 text-[#c8102e]" />

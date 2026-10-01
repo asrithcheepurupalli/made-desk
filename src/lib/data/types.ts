@@ -137,3 +137,34 @@ export interface MasterSop {
   created_at: string;
   updated_at: string;
 }
+
+export type ProductOwner = "made" | "asrith";
+export type ProductType = "Product" | "Concept study" | "Client build" | "Pitch demo" | "Case study" | "Tool" | "Experiment" | "Venture" | "Internal";
+export type ProductStatus = "live" | "beta" | "concept" | "source_only" | "down";
+
+/** Something we shipped: under made. or as one of Asrith's personal projects. */
+export interface Product {
+  id: string;
+  name: string;
+  owner: ProductOwner;
+  type: ProductType;
+  status: ProductStatus;
+  url: string;
+  repo: string;
+  tagline: string;
+  description: string;
+  tags: string[];
+  /** Where we found it (site, GitHub, notes) */
+  source: string;
+  note: string;
+  /** Path under /public or a data: URI */
+  image: string;
+  checked_at: string;
+  seed_version?: number;
+  /** Changed by hand, so a later seed refresh must not overwrite it */
+  edited?: boolean;
+  /** Soft delete for seeded entries so they do not come back */
+  hidden?: boolean;
+  created_at: string;
+  updated_at: string;
+}

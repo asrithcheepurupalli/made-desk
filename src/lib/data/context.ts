@@ -3,7 +3,8 @@ import { listClients } from "./clients";
 import { listNextActions } from "./actions";
 import { listCaptures } from "./captures";
 import { listMasters } from "./masters";
-import { playbookToMarkdown, clientToMarkdown, captureToMarkdown, masterToMarkdown } from "./text";
+import { listProducts } from "./products";
+import { playbookToMarkdown, clientToMarkdown, captureToMarkdown, masterToMarkdown, productToMarkdown } from "./text";
 
 /**
  * The whole studio as one readable document: every SOP body, every client workspace,
@@ -11,12 +12,13 @@ import { playbookToMarkdown, clientToMarkdown, captureToMarkdown, masterToMarkdo
  */
 export async function buildStudioContext(opts: { full?: boolean; header?: string } = {}): Promise<string> {
   const full = opts.full !== false;
-  const [playbooks, clients, actions, captures, masters] = await Promise.all([
+  const [playbooks, clients, actions, captures, masters, products] = await Promise.all([
     listPlaybooks(),
     listClients(),
     listNextActions(),
     listCaptures(),
     listMasters(),
+    listProducts(),
   ]);
   const byId = new Map(playbooks.map((p) => [p.id, p]));
   const mergedInto = new Map<string, string>();
@@ -30,6 +32,16 @@ export async function buildStudioContext(opts: { full?: boolean; header?: string
   out.push(
     `${playbooks.length} playbooks/SOPs (${masters.length} master SOPs merged from ${mergedInto.size} of them), ${clients.length} clients, ${open.length} open tasks, ${captures.length} captures.`
   );
+
+  const madeProducts = products.filter((p) => p.owner === "made");
+  const personal = products.filter((p) => p.owner === "asrith");
+  out.push("", `# PRODUCTS WE SHIPPED (${products.length}: ${madeProducts.length} under made., ${personal.length} Asrith personal)`);
+  if (products.length) {
+    out.push("## Built under made.", madeProducts.map((p) => productToMarkdown(p, !full)).join("\n"));
+    out.push("", "## Asrith's personal projects", personal.map((p) => productToMarkdown(p, !full)).join("\n"));
+  } else {
+    out.push("(none synced yet: open the Hall of Products tab in the app once)");
+  }
 
   if (masters.length) {
     out.push("", "# MASTER SOPs (canonical: overlapping SOPs merged into one. Prefer these over the originals)");

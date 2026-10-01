@@ -5,7 +5,7 @@ import { Sidebar } from "./Sidebar";
 import { QuickCaptureModal } from "./QuickCaptureModal";
 import { requestPersistentStorage } from "@/lib/store/backup";
 import { ToastProvider } from "./Toast";
-import { Command, X, Keyboard } from "lucide-react";
+import { Command, X, Keyboard, Menu } from "lucide-react";
 
 interface DashboardShellProps {
   children: React.ReactNode;
@@ -15,11 +15,13 @@ export function DashboardShell({ children }: DashboardShellProps) {
   React.useEffect(() => {
     requestPersistentStorage();
     // Catch up: merge any new overlapping SOPs (cheap no-op when nothing changed)
+    import("@/lib/data/products").then((m) => m.ensureProductSeed()).catch(() => {});
     import("@/lib/masters/sync").then((m) => m.scheduleMasterSync(2500)).catch(() => {});
   }, []);
 
   const [isQuickCaptureOpen, setIsQuickCaptureOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -45,10 +47,28 @@ export function DashboardShell({ children }: DashboardShellProps) {
     <ToastProvider>
       <div className="flex h-screen bg-[#f6f3ee] text-[#16130f] overflow-hidden">
         {/* Persistent Sidebar */}
-        <Sidebar onOpenQuickCapture={() => setIsQuickCaptureOpen(true)} />
+        <Sidebar
+          open={navOpen}
+          onClose={() => setNavOpen(false)}
+          onOpenQuickCapture={() => {
+            setNavOpen(false);
+            setIsQuickCaptureOpen(true);
+          }}
+        />
+        {navOpen && <div className="fixed inset-0 z-30 bg-black/40 md:hidden" onClick={() => setNavOpen(false)} aria-hidden />}
 
         {/* Main Content Area */}
-        <main className="flex-1 flex flex-col h-screen overflow-y-auto bg-[#f6f3ee] transition-opacity duration-200">
+        <main className="flex-1 min-w-0 flex flex-col h-screen overflow-y-auto overflow-x-hidden bg-[#f6f3ee] transition-opacity duration-200">
+          {/* Phone-sized screens: top bar with the menu button */}
+          <div className="md:hidden sticky top-0 z-20 flex items-center justify-between gap-3 px-4 py-3 border-b-2 border-[#16130f] bg-white">
+            <button type="button" onClick={() => setNavOpen(true)} aria-label="Open menu" className="p-1 -ml-1">
+              <Menu className="w-6 h-6" />
+            </button>
+            <span className="font-display italic font-semibold text-xl">
+              made<span className="text-[#c8102e] not-italic">.</span> <span className="font-mono not-italic text-[10px] uppercase border border-[#16130f] px-1 align-middle">desk</span>
+            </span>
+            <span className="w-6" />
+          </div>
           {children}
         </main>
 
@@ -113,6 +133,10 @@ export function DashboardShell({ children }: DashboardShellProps) {
                 <div className="flex items-center justify-between p-2 bg-[#f6f3ee] border border-[#16130f]">
                   <span>Grounded AI Assistant</span>
                   <kbd className="px-2 py-0.5 bg-white border border-[#16130f] font-bold">7</kbd>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-[#f6f3ee] border border-[#16130f]">
+                  <span>Hall of Products</span>
+                  <kbd className="px-2 py-0.5 bg-white border border-[#16130f] font-bold">8</kbd>
                 </div>
                 <div className="flex items-center justify-between p-2 bg-[#f6f3ee] border border-[#16130f]">
                   <span>Keyboard Shortcuts Help</span>

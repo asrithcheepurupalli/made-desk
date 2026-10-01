@@ -88,6 +88,7 @@ export async function writeSnapshot(dir: FileSystemDirectoryHandle): Promise<voi
         content: Array.isArray(r.content) ? r.content.map((b: any) => (b?.type === "image" ? { ...b, url: undefined } : b)) : r.content,
       }));
     }
+    if (name === "products.json") rows = rows.map((r) => (typeof r.image === "string" && r.image.startsWith("data:") ? { ...r, image: "" } : r));
     const file = await dir.getFileHandle(name, { create: true });
     const w = await file.createWritable();
     await w.write(JSON.stringify(rows, null, 2));

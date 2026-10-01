@@ -1,4 +1,4 @@
-import type { Playbook, Client, Capture, MasterSop } from "./types";
+import type { Playbook, Client, Capture, MasterSop, Product } from "./types";
 
 /** Flatten inline text for both our editor blocks and BlockNote-style blocks. */
 function inlineText(b: any): string {
@@ -80,5 +80,19 @@ export function masterToMarkdown(m: MasterSop, sourceTitles: string[]): string {
     blocksToMarkdown(m.content),
   ]
     .filter((l, i) => l !== "" || i === 3)
+    .join("\n");
+}
+
+const STATUS_TEXT: Record<string, string> = { live: "live", beta: "beta", concept: "upcoming", source_only: "source only", down: "link down" };
+
+export function productToMarkdown(p: Product, brief = false): string {
+  const links = [p.url && `site: ${p.url}`, p.repo && `code: ${p.repo}`].filter(Boolean).join(" | ");
+  if (brief) return `- ${p.name} [${p.type}, ${STATUS_TEXT[p.status] || p.status}]${p.url ? ` ${p.url}` : ""}`;
+  return [
+    `- **${p.name}** [${p.type}, ${STATUS_TEXT[p.status] || p.status}]${links ? ` ${links}` : ""}`,
+    `  ${[p.tagline, p.description].filter(Boolean).join(" ")}`,
+    p.note ? `  note: ${p.note}` : "",
+  ]
+    .filter(Boolean)
     .join("\n");
 }

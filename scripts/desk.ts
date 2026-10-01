@@ -2,6 +2,8 @@
 import { listPlaybooks, getPlaybookBySlug, createPlaybook, updatePlaybook } from "../src/lib/data/playbooks";
 import { listClients, getClientBySlug, createClient, updateClient } from "../src/lib/data/clients";
 import { listNextActions, createNextAction, updateNextAction } from "../src/lib/data/actions";
+import { listProducts } from "../src/lib/data/products";
+import { productToMarkdown } from "../src/lib/data/text";
 import { listCaptures, createCapture, updateCapture, getCapture } from "../src/lib/data/captures";
 import { buildStudioContext } from "../src/lib/data/context";
 import { playbookToMarkdown, clientToMarkdown, blocksToMarkdown } from "../src/lib/data/text";
@@ -17,6 +19,14 @@ const [,, command, subcommand, ...args] = process.argv;
 async function printStudioContext() {
   const brief = [subcommand, ...args].includes("--brief");
   console.log(await buildStudioContext({ full: !brief, header: freshnessHeader() }));
+}
+
+async function listProductsCmd() {
+  const all = await listProducts();
+  const owner = subcommand === "made" || subcommand === "personal" ? subcommand : null;
+  const rows = all.filter((p) => !owner || (owner === "made" ? p.owner === "made" : p.owner === "asrith"));
+  console.log(`${freshnessHeader()}\n\n${rows.length} products${owner ? ` (${owner})` : ""}:\n`);
+  console.log(rows.map((p) => productToMarkdown(p)).join("\n"));
 }
 
 async function searchStudio() {
@@ -309,6 +319,9 @@ async function main() {
     case "summary":
       await printStudioContext();
       break;
+    case "products":
+      await listProductsCmd();
+      break;
     case "search":
       await searchStudio();
       break;
@@ -333,6 +346,7 @@ made. desk CLI: Direct agency knowledge and operational control
 
 Usage:
   desk context [--brief]               Print the whole studio: every SOP body, clients, tasks, research
+  desk products [made|personal]        List every product we shipped, with links
   desk search "<words>"                Find matching lines across SOPs, clients, captures
   desk import <backup.json>            Load an app Export file into .data/
   desk playbooks [list|get|create]     Manage agency SOPs and regional playbooks

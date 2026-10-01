@@ -11,6 +11,7 @@ import {
   CheckSquare,
   BookOpen,
   Layers,
+  Rocket,
   Users,
   Bot,
   Plus,
@@ -20,9 +21,12 @@ import { Wordmark } from "./Wordmark";
 
 interface SidebarProps {
   onOpenQuickCapture?: () => void;
+  /** Phone-sized screens: the sidebar slides over the page */
+  open?: boolean;
+  onClose?: () => void;
 }
 
-export function Sidebar({ onOpenQuickCapture }: SidebarProps) {
+export function Sidebar({ onOpenQuickCapture, open = false, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -69,6 +73,12 @@ export function Sidebar({ onOpenQuickCapture }: SidebarProps) {
       icon: Bot,
       shortcut: "7",
     },
+    {
+      href: "/products",
+      label: "Hall of Products",
+      icon: Rocket,
+      shortcut: "8",
+    },
   ];
 
   useEffect(() => {
@@ -94,6 +104,7 @@ export function Sidebar({ onOpenQuickCapture }: SidebarProps) {
       if (e.key === "5") router.push("/masters");
       if (e.key === "6") router.push("/clients");
       if (e.key === "7") router.push("/assistant");
+      if (e.key === "8") router.push("/products");
     }
 
     window.addEventListener("keydown", handleKeyDown);
@@ -101,7 +112,9 @@ export function Sidebar({ onOpenQuickCapture }: SidebarProps) {
   }, [router, onOpenQuickCapture]);
 
   return (
-    <aside className="w-64 border-r-2 border-[#16130f] bg-[#f6f3ee] flex flex-col justify-between h-screen sticky top-0 shrink-0 select-none">
+    <aside
+      className={`w-64 border-r-2 border-[#16130f] bg-[#f6f3ee] flex flex-col justify-between h-screen shrink-0 select-none overflow-y-auto fixed inset-y-0 left-0 z-40 transition-transform duration-200 md:sticky md:top-0 md:translate-x-0 md:z-auto ${open ? "translate-x-0" : "-translate-x-full"}`}
+    >
       {/* Top Header */}
       <div>
         <div className="p-5 border-b-2 border-[#16130f] flex items-center justify-between bg-white">
@@ -141,6 +154,7 @@ export function Sidebar({ onOpenQuickCapture }: SidebarProps) {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={onClose}
                 className={`flex items-center justify-between px-3 py-2.5 border-2 text-xs font-mono font-bold uppercase tracking-wider transition-all ${
                   isActive
                     ? "bg-[#16130f] text-[#f6f3ee] border-[#16130f] shadow-[2px_2px_0px_#c8102e]"
