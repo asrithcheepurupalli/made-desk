@@ -15,20 +15,29 @@ export async function exportBackup(): Promise<void> {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
+/**
+ * Merges a backup into what is already here: rows with a new id are added, rows with a known id are
+ * replaced by the file's version, and everything else is kept. Importing never deletes anything.
+ */
 export async function importBackup(file: File): Promise<number> {
   const parsed = JSON.parse(await file.text());
   if (parsed?.app !== "made-desk" || typeof parsed.data !== "object") {
     throw new Error("This is not a made. desk backup file.");
   }
-  let count = 0;
+  let added = 0;
   for (const name of STORE_FILES) {
-    const rows = parsed.data[name];
-    if (Array.isArray(rows)) {
-      await writeJsonFile(name, rows);
-      count += rows.length;
+    const incoming = parsed.data[name];
+    if (!Array.isArray(incoming) || incoming.length === 0) continue;
+    const current = await readJsonFile<any[]>(name, []);
+    const byId = new Map(current.map((r) => [r?.id, r]));
+    for (const row of incoming) {
+      if (!byId.has(row?.id)) added++;
+      byId.set(row?.id, row);
     }
+    const hasIds = incoming.every((r) => r && r.id !== undefined);
+    await writeJsonFile(name, hasIds ? [...byId.values()] : incoming);
   }
-  return count;
+  return added;
 }
 
 /** Ask the browser not to evict our data under storage pressure. */

@@ -240,7 +240,7 @@ export function Sidebar({ onOpenQuickCapture, open = false, onClose }: SidebarPr
                 if (!file) return;
                 try {
                   const n = await importBackup(file);
-                  alert(`Restored ${n} records from backup.`);
+                  alert(`Imported: ${n} new records added. Nothing was deleted.`);
                 } catch (err) {
                   alert(err instanceof Error ? err.message : "Could not import that file.");
                 }
