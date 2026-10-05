@@ -23,3 +23,8 @@ export function hasClerk(): boolean {
 export function hasGemini(): boolean {
   return Boolean(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY);
 }
+
+/** True when any AI provider is configured (Claude, an OpenAI-style router, or Gemini). */
+export function hasAI(): boolean {
+  return Boolean(process.env.ANTHROPIC_API_KEY || process.env.OPENAI_COMPAT_BASE_URL || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY);
+}

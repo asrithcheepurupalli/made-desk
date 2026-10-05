@@ -1,9 +1,33 @@
 import { createCapture, updateCapture, deleteCapture, getCapture } from "@/lib/data/captures";
 import { createNextAction, listNextActions } from "@/lib/data/actions";
 import { createPlaybook } from "@/lib/data/playbooks";
-import { extractCaptureAction } from "./extract";
+import { extractCaptureAction, analyzeTextAction } from "./extract";
+import type { ExtractionResult } from "@/lib/ai/mock";
 import { generateSopAction, type GeneratedSop } from "./sop";
 import type { SourceType, Capture } from "@/lib/data/types";
+
+/** Next Actions from an extraction: at most 2, and never near-duplicates of open tasks */
+async function deriveActions(captureId: string, extraction: ExtractionResult) {
+  const tokens = (t: string) => new Set(t.toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter((w) => w.length > 2));
+  const similar = (a: string, b: string) => {
+    const x = tokens(a);
+    const y = tokens(b);
+    const inter = [...x].filter((w) => y.has(w)).length;
+    return inter / Math.max(1, Math.min(x.size, y.size)) >= 0.7;
+  };
+  const openTitles = (await listNextActions()).filter((a) => a.status !== "done").map((a) => a.title);
+  for (const act of (extraction.proposed_actions || []).slice(0, 2)) {
+    if (openTitles.some((t) => similar(t, act.title))) continue;
+    openTitles.push(act.title);
+    await createNextAction({
+      title: act.title,
+      description: act.description,
+      priority: act.priority || "medium",
+      status: "todo",
+      source_capture_id: captureId,
+    });
+  }
+}
 
 export async function processCaptureAction(formData: FormData) {
   const rawText = (formData.get("raw_text") as string) || "";
@@ -35,6 +59,19 @@ export async function processCaptureAction(formData: FormData) {
     });
     const { extraction } = result;
 
+    // The AI could not run. Keep everything we downloaded so a retry needs no new download.
+    if (!extraction) {
+      await updateCapture(capture.id, {
+        raw_text: result.transcript || rawText.trim(),
+        status: "failed",
+        quality_note: `AI analysis did not run: ${result.aiError || "unknown error"} Use Retry analysis once fixed.`,
+        screenshots: result.screenshots.length > 0 ? result.screenshots : undefined,
+        duration_seconds: result.durationSeconds,
+        source_quality: result.quality === "none" ? "caption_only" : result.quality,
+      });
+      return { error: `Saved, but the AI could not analyse it: ${result.aiError || "unknown error"} Open the capture and press Retry analysis once that is fixed.` };
+    }
+
     if (result.quality === "none" && !result.transcript.trim()) {
       await updateCapture(capture.id, {
         status: "failed",
@@ -58,26 +95,7 @@ export async function processCaptureAction(formData: FormData) {
       processed_at: new Date().toISOString(),
     });
 
-    // 4. Derive Next Actions: at most 2, and never near-duplicates of open tasks
-    const tokens = (t: string) => new Set(t.toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter((w) => w.length > 2));
-    const similar = (a: string, b: string) => {
-      const x = tokens(a);
-      const y = tokens(b);
-      const inter = [...x].filter((w) => y.has(w)).length;
-      return inter / Math.max(1, Math.min(x.size, y.size)) >= 0.7;
-    };
-    const openTitles = (await listNextActions()).filter((a) => a.status !== "done").map((a) => a.title);
-    for (const act of (extraction.proposed_actions || []).slice(0, 2)) {
-      if (openTitles.some((t) => similar(t, act.title))) continue;
-      openTitles.push(act.title);
-      await createNextAction({
-        title: act.title,
-        description: act.description,
-        priority: act.priority || "medium",
-        status: "todo",
-        source_capture_id: capture.id,
-      });
-    }
+    await deriveActions(capture.id, extraction);
 
     return {
       success: true,
@@ -90,6 +108,25 @@ export async function processCaptureAction(formData: FormData) {
     if (captureId) await updateCapture(captureId, { status: "failed" }).catch(() => {});
     return { error: "Failed to process capture with AI." };
   }
+}
+
+/** Re-run the AI step on a capture whose analysis failed. No new download. */
+export async function retryCaptureAnalysisAction(captureId: string) {
+  const capture = await getCapture(captureId);
+  if (!capture) return { error: "Capture not found." };
+  const quality = capture.source_quality === "full" ? "full" : "manual";
+  const { extraction, aiError } = await analyzeTextAction({ rawText: capture.raw_text, sourceUrl: capture.source_url, quality });
+  if (!extraction) return { error: aiError || "The AI could not analyse this." };
+  await updateCapture(captureId, {
+    status: "processed",
+    summary: extraction.summary,
+    extracted_insights: extraction.extracted_insights,
+    suggested_category: extraction.suggested_category,
+    quality_note: undefined,
+    processed_at: new Date().toISOString(),
+  });
+  await deriveActions(captureId, extraction);
+  return { success: true };
 }
 
 export async function deleteCaptureAction(id: string) {

@@ -3,6 +3,7 @@ import { promisify } from "node:util";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { GoogleGenAI } from "@google/genai";
+import { llm, aiProvider } from "@/lib/ai/llm";
 
 const execFileAsync = promisify(execFile);
 
@@ -322,6 +323,127 @@ async function transcribeWithGemini(
   }
 }
 
+/** Local speech-to-text: OpenAI Whisper on this machine. Free, private, no key. */
+async function getWhisperPath(): Promise<string | null> {
+  const found = await findBinary("whisper", [
+    process.env.WHISPER_BIN || "",
+    "/Applications/Anaconda/anaconda3/bin/whisper",
+    "/opt/homebrew/bin/whisper",
+    "/usr/local/bin/whisper",
+    "/Users/asrithcheepurupalli/.local/bin/whisper",
+  ].filter(Boolean));
+  if (found !== "whisper") return found;
+  return execFileAsync("whisper", ["--help"], { timeout: 8000 }).then(() => "whisper", () => null);
+}
+
+async function transcribeSpeechLocally(videoPath: string, ffmpeg: string, dir: string): Promise<string> {
+  const whisper = await getWhisperPath();
+  if (!whisper) return "";
+  const wav = path.join(dir, "speech.wav");
+  try {
+    await execFileAsync(ffmpeg, ["-y", "-i", videoPath, "-vn", "-ac", "1", "-ar", "16000", wav], { timeout: 60000 });
+    // "base" is ~5x faster than "small" with the same accuracy on clear speech (set WHISPER_MODEL=small for noisy audio)
+    const model = process.env.WHISPER_MODEL || "base";
+    await execFileAsync(whisper, [wav, "--model", model, "--fp16", "False", "--output_format", "txt", "--output_dir", dir, "--verbose", "False"], {
+      timeout: 5 * 60 * 1000,
+      maxBuffer: 20 * 1024 * 1024,
+    });
+    return (await fs.readFile(path.join(dir, "speech.txt"), "utf-8")).trim();
+  } catch (err) {
+    console.warn("[made. desk] Local Whisper failed:", err instanceof Error ? err.message.slice(0, 160) : err);
+    return "";
+  }
+}
+
+const OCR_PROMPT =
+  "These are frames from one short video, in time order. List ALL on-screen text exactly as shown, in reading order, one line per distinct piece of text. " +
+  "Text that repeats across consecutive frames is listed once. Include slide headings, bullet lists, example messages, captions and labels. " +
+  "Ignore app interface chrome, usernames and watermarks. If there is no readable text, write NONE. Output only the text, no commentary.";
+
+async function getTesseractPath(): Promise<string | null> {
+  const found = await findBinary("tesseract", [process.env.TESSERACT_BIN || "", "/opt/homebrew/bin/tesseract", "/usr/local/bin/tesseract", "/usr/bin/tesseract"].filter(Boolean));
+  if (found !== "tesseract") return found;
+  return execFileAsync("tesseract", ["--version"], { timeout: 5000 }).then(() => "tesseract", () => null);
+}
+
+/** Free, offline OCR: read each frame with Tesseract and keep each distinct line once. */
+async function ocrFramesLocally(dir: string, names: string[]): Promise<string> {
+  const tess = await getTesseractPath();
+  if (!tess) return "";
+  const seen = new Set<string>();
+  const out: string[] = [];
+  const norm = (l: string) => l.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const readOne = async (f: string) => {
+    try {
+      // One thread each: several Tesseract runs in parallel otherwise starve each other (and Whisper)
+      const { stdout } = await execFileAsync(tess, [f, "stdout", "--psm", "11"], {
+        // Relative name from inside the folder: Tesseract/Leptonica cannot open absolute /tmp paths on macOS
+        cwd: dir,
+        timeout: 60000,
+        maxBuffer: 4 * 1024 * 1024,
+        env: { ...process.env, OMP_THREAD_LIMIT: "1" },
+      });
+      return stdout.split("\n").map((l) => l.trim());
+    } catch {
+      return [];
+    }
+  };
+  // Four at a time
+  const results: string[][] = new Array(names.length);
+  let i = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(4, names.length) }, async () => {
+      while (i < names.length) {
+        const n = i++;
+        results[n] = await readOne(names[n]);
+      }
+    })
+  );
+  for (const lines of results) {
+    for (const line of lines) {
+      const key = norm(line);
+      // Drop noise: very short lines and lines with almost no letters
+      const letters = (line.match(/[A-Za-z]/g) || []).length;
+      const clean = (line.match(/[A-Za-z0-9 .,'"!?:;&%$+\-]/g) || []).length;
+      if (key.length < 4 || letters < 4 || clean / line.length < 0.8 || seen.has(key)) continue;
+      // OCR garbage tends to be long strings with no real words in them
+      const words = key.split(" ").filter((w) => w.length >= 3);
+      const wordlike = words.filter((w) => w.length <= 15 && /[aeiouy]/.test(w)).length;
+      if (!words.length || wordlike / words.length < 0.6 || /\bask gemini\b|\bhtm!?\b/.test(key)) continue;
+      seen.add(key);
+      out.push(line);
+    }
+  }
+  return out.join("\n");
+}
+
+/** Pull evenly spaced frames and read their on-screen text. Local Tesseract first, a vision model as backup. */
+async function readOnScreenText(videoPath: string, ffmpeg: string, dir: string, duration: number): Promise<{ text: string; frames: string[] }> {
+  try {
+    const every = Math.max(1.5, duration / 40);
+    await execFileAsync(ffmpeg, ["-y", "-i", videoPath, "-vf", `fps=1/${every.toFixed(2)},scale=720:-2`, "-q:v", "4", "-frames:v", "40", path.join(dir, "ocr_%02d.jpg")], { timeout: 60000 });
+    const names = (await fs.readdir(dir)).filter((f) => f.startsWith("ocr_")).sort();
+    const frames: string[] = [];
+    for (const f of names) frames.push(`data:image/jpeg;base64,${(await fs.readFile(path.join(dir, f))).toString("base64")}`);
+    if (!frames.length) return { text: "", frames: [] };
+
+    const local = await ocrFramesLocally(dir, names);
+    if (local.trim().length > 20) return { text: local, frames };
+
+    // Tesseract missing or found nothing: ask a vision-capable AI, if one is configured
+    if (aiProvider() === "none") return { text: "", frames };
+    try {
+      const out = (await llm({ tier: "fast", maxTokens: 4000, images: frames.slice(0, 30), prompt: OCR_PROMPT, timeoutMs: 120000 })).trim();
+      return { text: /^NONE\.?$/i.test(out) ? "" : out, frames };
+    } catch {
+      return { text: "", frames };
+    }
+  } catch (err) {
+    console.warn("[made. desk] On-screen text read failed:", err instanceof Error ? err.message.slice(0, 160) : err);
+    return { text: "", frames: [] };
+  }
+}
+
 export async function extractMediaFromUrl(
   url: string,
   captureId: string
@@ -380,41 +502,45 @@ export async function extractMediaFromUrl(
             if (!isNaN(d) && d > 0) durationSeconds = Math.round(d);
           } catch {}
 
-          // Keyframes when ffmpeg exists (local); otherwise the cover image stays
-          if (ffmpeg !== "ffmpeg" || (await execFileAsync(ffmpeg, ["-version"], { timeout: 5000 }).then(() => true, () => false))) {
-            try {
-              const shots = path.join(tmpDir, "frame_%02d.jpg");
-              const every = Math.max(1, Math.round((durationSeconds || 30) / 4));
-              await execFileAsync(ffmpeg, ["-y", "-i", videoPath, "-vf", `fps=1/${every},scale=720:-1`, "-vframes", "5", shots], { timeout: 30000 });
-              const frames = (await fs.readdir(tmpDir)).filter((f) => f.startsWith("frame_")).sort();
-              const inlined: string[] = [];
-              for (const f of frames) {
-                const b = await fs.readFile(path.join(tmpDir, f));
-                inlined.push(`data:image/jpeg;base64,${b.toString("base64")}`);
-              }
-              if (inlined.length) screenshots = inlined;
-            } catch {}
-          }
+          const haveFfmpeg = await execFileAsync(ffmpeg, ["-version"], { timeout: 5000 }).then(() => true, () => false);
+          let spokenOut = "";
+          let screenOut = "";
 
-          // Transcribe: send the video itself when small enough, else just the audio track
-          let result: { spoken: string; onScreen: string } | null = null;
-          const stat = await fs.stat(videoPath);
-          if (stat.size <= MAX_INLINE_VIDEO_BYTES) {
-            result = await transcribeWithGemini(await fs.readFile(videoPath), "video/mp4");
-          } else {
-            try {
-              const audio = path.join(tmpDir, "audio.mp3");
-              await execFileAsync(ffmpeg, ["-y", "-i", videoPath, "-vn", "-ar", "16000", "-ac", "1", "-b:a", "48k", audio], { timeout: 60000 });
-              result = await transcribeWithGemini(await fs.readFile(audio), "audio/mp3");
-            } catch {
-              notes.push("Video too large to transcribe here.");
+          if (haveFfmpeg) {
+            // Speech (local Whisper) and on-screen text (vision) at the same time
+            const [speech, screen] = await Promise.all([
+              transcribeSpeechLocally(videoPath, ffmpeg, tmpDir),
+              readOnScreenText(videoPath, ffmpeg, tmpDir, durationSeconds || 30),
+            ]);
+            spokenOut = speech;
+            screenOut = screen.text;
+            if (screen.frames.length) {
+              // Four evenly spaced frames for the card gallery
+              const step = Math.max(1, Math.floor(screen.frames.length / 4));
+              screenshots = screen.frames.filter((_, i) => i % step === 0).slice(0, 4);
             }
           }
-          if (result) {
-            spoken = result.spoken;
-            onScreenText = result.onScreen;
-          } else if (!notes.length) {
-            notes.push("Transcription failed. Check that GEMINI_API_KEY is set.");
+
+          // No local Whisper or ffmpeg: Gemini can still hear and watch the video if it is the configured provider
+          if (!spokenOut && !screenOut && aiProvider() === "gemini") {
+            const stat = await fs.stat(videoPath);
+            if (stat.size <= MAX_INLINE_VIDEO_BYTES) {
+              const g = await transcribeWithGemini(await fs.readFile(videoPath), "video/mp4");
+              if (g) {
+                spokenOut = g.spoken;
+                screenOut = g.onScreen;
+              }
+            }
+          }
+
+          spoken = spokenOut;
+          onScreenText = screenOut;
+          if (!spoken && !onScreenText) {
+            notes.push(
+              haveFfmpeg
+                ? "Could not read the video: Whisper is not installed or no AI key is set."
+                : "This machine has no ffmpeg, so the video could not be transcribed (it only works when the desk runs on your Mac)."
+            );
           }
         }
       } catch (err) {
@@ -439,7 +565,7 @@ export async function extractMediaFromUrl(
   const parts: string[] = [];
   if (caption.trim()) parts.push(`CAPTION:\n${caption.trim()}`);
   if (spoken.trim()) parts.push(`${isInstagram || /youtu|tiktok/.test(url) ? "SPOKEN TRANSCRIPT" : "PAGE TEXT"}:\n${spoken.trim()}`);
-  if (onScreenText.trim()) parts.push(`ON-SCREEN TEXT:\n${onScreenText.trim()}`);
+  if (onScreenText.trim()) parts.push(`ON-SCREEN TEXT (read by OCR, so some lines may be garbled: ignore garbage, never guess what it meant):\n${onScreenText.trim()}`);
 
   return {
     transcript: parts.join("\n\n"),

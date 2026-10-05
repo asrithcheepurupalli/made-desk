@@ -195,7 +195,7 @@ export function ChatWindow({ initialSuggestions = [] }: ChatWindowProps) {
       <div className="flex items-center justify-between px-4 py-2.5 bg-white border-b-2 border-[#16130f]">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-[#25d366] animate-pulse" />
-          <span className="label text-[#16130f]">Grounded Gemini 2.5 Flash Engine · Superpowered</span>
+          <span className="label text-[#16130f]">Grounded AI Engine · Superpowered</span>
         </div>
 
         <button

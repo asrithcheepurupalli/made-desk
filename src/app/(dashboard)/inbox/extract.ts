@@ -1,6 +1,7 @@
 "use server";
 
 import { extractInsightsWithGemini } from "@/lib/ai/gemini";
+import { explainAiError } from "@/lib/ai/llm";
 import { extractMediaFromUrl } from "@/lib/media/extractor";
 import type { ExtractionResult } from "@/lib/ai/mock";
 import type { SourceType, SourceQuality } from "@/lib/data/types";
@@ -11,7 +12,9 @@ export interface CaptureExtraction {
   durationSeconds?: number;
   quality: SourceQuality | "none";
   note?: string;
-  extraction: ExtractionResult;
+  /** null when the AI could not run: the transcript is still returned so nothing is lost */
+  extraction: ExtractionResult | null;
+  aiError?: string;
 }
 
 /**
@@ -49,9 +52,27 @@ export async function extractCaptureAction(input: {
     }
   }
 
-  const extraction =
-    quality === "none"
-      ? await extractInsightsWithGemini(transcript || `Content from ${sourceUrl}`, sourceUrl, "caption_only")
-      : await extractInsightsWithGemini(transcript, sourceUrl, quality);
-  return { transcript, screenshots, durationSeconds, quality, note, extraction };
+  try {
+    const extraction =
+      quality === "none"
+        ? await extractInsightsWithGemini(transcript || `Content from ${sourceUrl}`, sourceUrl, "caption_only")
+        : await extractInsightsWithGemini(transcript, sourceUrl, quality);
+    return { transcript, screenshots, durationSeconds, quality, note, extraction };
+  } catch (err) {
+    console.warn("[made. desk] AI analysis failed:", err);
+    return { transcript, screenshots, durationSeconds, quality, note, extraction: null, aiError: explainAiError(err) };
+  }
+}
+
+/** Re-run only the AI step on text we already have (no download). Used by Retry. */
+export async function analyzeTextAction(input: {
+  rawText: string;
+  sourceUrl?: string;
+  quality: SourceQuality;
+}): Promise<{ extraction: ExtractionResult | null; aiError?: string }> {
+  try {
+    return { extraction: await extractInsightsWithGemini(input.rawText, input.sourceUrl, input.quality) };
+  } catch (err) {
+    return { extraction: null, aiError: explainAiError(err) };
+  }
 }

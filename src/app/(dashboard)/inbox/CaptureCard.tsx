@@ -21,7 +21,7 @@ import {
   X,
   Maximize2,
 } from "lucide-react";
-import { promoteCaptureToPlaybookAction, deleteCaptureAction } from "./actions";
+import { promoteCaptureToPlaybookAction, retryCaptureAnalysisAction, deleteCaptureAction } from "./actions";
 import { useToast } from "@/components/Toast";
 import type { Capture, SourceType } from "@/lib/data/types";
 
@@ -32,6 +32,7 @@ export function CaptureCard({ capture }: { capture: Capture }) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isPromoting, startPromote] = useTransition();
   const [isDeleting, startDelete] = useTransition();
+  const [isRetrying, startRetry] = useTransition();
 
   const sourceIcons: Record<SourceType, any> = {
     reel: Film,
@@ -137,8 +138,24 @@ export function CaptureCard({ capture }: { capture: Capture }) {
             </div>
           )}
           {capture.status === "failed" && capture.quality_note && (
-            <div className="mb-3 p-2.5 border-2 border-[#c8102e] bg-[#fbe8eb] text-[11px] font-mono text-[#c8102e]">
-              Could not read this link. {capture.quality_note}
+            <div className="mb-3 p-2.5 border-2 border-[#c8102e] bg-[#fbe8eb] text-[11px] font-mono text-[#c8102e] space-y-2">
+              <p>{capture.quality_note.startsWith("AI analysis") ? capture.quality_note : `Could not read this link. ${capture.quality_note}`}</p>
+              {capture.quality_note.startsWith("AI analysis") && (
+                <button
+                  type="button"
+                  disabled={isRetrying}
+                  onClick={() =>
+                    startRetry(async () => {
+                      const res = await retryCaptureAnalysisAction(capture.id);
+                      if (res.error) showToast(res.error, "error");
+                      else showToast("Analysis complete", "success");
+                    })
+                  }
+                  className="bg-[#c8102e] text-white uppercase px-3 py-1.5 border-2 border-[#16130f] disabled:opacity-50"
+                >
+                  {isRetrying ? "Retrying..." : "Retry analysis"}
+                </button>
+              )}
             </div>
           )}
 

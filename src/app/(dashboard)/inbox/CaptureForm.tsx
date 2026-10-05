@@ -60,7 +60,7 @@ export function CaptureForm() {
         </div>
         <div className="flex items-center gap-2">
           <span className="label bg-[#ede8df] text-[#16130f] px-2 py-1 border border-[#16130f]">
-            Gemini 2.5 Flash
+            AI extraction
           </span>
         </div>
       </div>
@@ -150,7 +150,7 @@ export function CaptureForm() {
         {/* Bottom submit */}
         <div className="flex items-center justify-between pt-2">
           <p className="text-[11px] font-mono text-[#7c7770]">
-            Automatic media extraction: yt-dlp + ffmpeg + Gemini audio transcription.
+            Automatic media extraction: yt-dlp + ffmpeg + Whisper (speech) + OCR (on-screen text).
           </p>
           <button
             type="submit"

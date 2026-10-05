@@ -1,6 +1,6 @@
 "use server";
 
-import { GoogleGenAI } from "@google/genai";
+import { llmJson, aiProvider } from "@/lib/ai/llm";
 
 export interface TriageTask {
   id: string;
@@ -45,24 +45,14 @@ function ruleBased(tasks: TriageTask[]): TriageDecision[] {
 }
 
 export async function triageTasksAction(input: { tasks: TriageTask[]; sopTitles: string[] }): Promise<{ decisions: TriageDecision[]; usedAi: boolean }> {
-  const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-  if (!key || input.tasks.length === 0) return { decisions: ruleBased(input.tasks), usedAi: false };
+  if (aiProvider() === "none" || input.tasks.length === 0) return { decisions: ruleBased(input.tasks), usedAi: false };
   try {
-    const ai = new GoogleGenAI({ apiKey: key });
-    const res = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { text: PROMPT },
-            { text: `SOPS THE STUDIO ALREADY HAS:\n${input.sopTitles.map((t) => "- " + t).join("\n")}\n\nTASKS:\n${JSON.stringify(input.tasks)}` },
-          ],
-        },
-      ],
-      config: { responseMimeType: "application/json", temperature: 0, thinkingConfig: { thinkingBudget: 2048 } },
+    const parsed = await llmJson<{ decisions?: TriageDecision[] }>({
+      tier: "fast",
+      maxTokens: 8000,
+      system: PROMPT,
+      prompt: `SOPS THE STUDIO ALREADY HAS:\n${input.sopTitles.map((t) => "- " + t).join("\n")}\n\nTASKS:\n${JSON.stringify(input.tasks)}`,
     });
-    const parsed = JSON.parse((res.text || "").trim()) as { decisions?: TriageDecision[] };
     const byId = new Map((parsed.decisions || []).map((d) => [d.id, d]));
     // Anything the model skipped is kept: never delete on silence
     const decisions = input.tasks.map((t): TriageDecision => {

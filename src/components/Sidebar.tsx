@@ -2,6 +2,7 @@
 
 import { exportBackup, importBackup } from "@/lib/store/backup";
 import { ClaudeLink } from "./ClaudeLink";
+import { getAiStatusAction } from "@/lib/ai/status";
 import React, { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -30,6 +31,10 @@ interface SidebarProps {
 
 export function Sidebar({ onOpenQuickCapture, open = false, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const [ai, setAi] = React.useState<{ label: string; ok: boolean } | null>(null);
+  useEffect(() => {
+    getAiStatusAction().then(setAi).catch(() => setAi({ label: "Unknown", ok: false }));
+  }, []);
   const router = useRouter();
 
   const navItems = [
@@ -205,8 +210,8 @@ export function Sidebar({ onOpenQuickCapture, open = false, onClose }: SidebarPr
       <div className="p-4 border-t-2 border-[#16130f] bg-white space-y-2.5">
         <div className="flex items-center justify-between text-[11px] font-mono text-[#7c7770]">
           <span>AI Engine</span>
-          <span className="label text-[#16130f] bg-[#ede8df] px-1.5 py-0.5 border border-[#16130f]">
-            Gemini Flash
+          <span className={`label px-1.5 py-0.5 border border-[#16130f] ${ai && !ai.ok ? "bg-[#c8102e] text-white" : "bg-[#ede8df] text-[#16130f]"}`}>
+            {ai ? ai.label : "..."}
           </span>
         </div>
         <div className="flex items-center justify-between text-[11px] font-mono text-[#7c7770]">

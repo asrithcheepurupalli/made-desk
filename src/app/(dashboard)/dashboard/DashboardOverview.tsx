@@ -189,7 +189,7 @@ export function DashboardOverview({
               {captures.length}
             </p>
             <span className="text-[10px] font-mono text-[#7c7770] mt-0.5 block">
-              {processedCaptures.length} processed with Gemini
+              {processedCaptures.length} processed with AI
             </span>
           </Link>
         </div>

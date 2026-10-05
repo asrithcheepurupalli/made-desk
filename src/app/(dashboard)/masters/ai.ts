@@ -1,6 +1,6 @@
 "use server";
 
-import { GoogleGenAI } from "@google/genai";
+import { llmJson, aiProvider, explainAiError } from "@/lib/ai/llm";
 import type { PlaybookCategory, Region } from "@/lib/data/types";
 import type { GeneratedSop } from "../inbox/sop";
 
@@ -27,10 +27,6 @@ export interface MergedSop extends GeneratedSop {
 }
 
 const noDash = (s: string) => s.replace(/—/g, ", ").replace(/–/g, "-");
-const client = () => {
-  const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-  return key ? new GoogleGenAI({ apiKey: key }) : null;
-};
 
 const CLUSTER_PROMPT = `You organise a studio's SOP library. Group SOPs that DUPLICATE or heavily OVERLAP: same job to be done, so a reader would follow essentially the same procedure or use the same scripts.
 
@@ -46,23 +42,15 @@ Rules:
 Return ONLY JSON: {"clusters":[{"master_id":"id or null","topic":"","member_ids":["sop id"]}]}`;
 
 export async function clusterSopsAction(input: ClusterInput): Promise<Cluster[] | null> {
-  const ai = client();
-  if (!ai || input.sops.length < 2) return input.sops.length < 2 ? [] : null;
+  if (input.sops.length < 2) return [];
+  if (aiProvider() === "none") return null;
   try {
-    const res = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { text: CLUSTER_PROMPT },
-            { text: `EXISTING MASTERS:\n${JSON.stringify(input.masters)}\n\nSOPS:\n${JSON.stringify(input.sops)}` },
-          ],
-        },
-      ],
-      config: { responseMimeType: "application/json", temperature: 0, thinkingConfig: { thinkingBudget: 2048 } },
+    const parsed = await llmJson<{ clusters?: Cluster[] }>({
+      tier: "smart",
+      maxTokens: 4000,
+      system: CLUSTER_PROMPT,
+      prompt: `EXISTING MASTERS:\n${JSON.stringify(input.masters)}\n\nSOPS:\n${JSON.stringify(input.sops)}`,
     });
-    const parsed = JSON.parse((res.text || "").trim()) as { clusters?: Cluster[] };
     const valid = new Set(input.sops.map((s) => s.id));
     const seen = new Set<string>();
     const out: Cluster[] = [];
@@ -74,7 +62,7 @@ export async function clusterSopsAction(input: ClusterInput): Promise<Cluster[] 
     }
     return out;
   } catch (err) {
-    console.warn("[made. desk] SOP clustering failed:", err);
+    console.warn("[made. desk] SOP clustering failed:", explainAiError(err));
     return null;
   }
 }
@@ -99,17 +87,17 @@ Return ONLY JSON:
 {"title":"","category":"acquisition|onboarding|outreach|delivery|pricing|operations","region":"uae|india|us|global","tags":[""],"summary":"","purpose":"","when_to_use":"","steps":[{"title":"","details":""}],"scripts":[{"label":"","text":""}],"rules":[""],"checklist":[""],"not_covered":[""],"conflicts":[""],"change_summary":""}`;
 
 export async function mergeSopsAction(input: MergeInput): Promise<MergedSop | null> {
-  const ai = client();
-  if (!ai || input.members.length < 1) return null;
+  if (aiProvider() === "none" || input.members.length < 1) return null;
   try {
     const sources = input.members.map((m, i) => `--- SOURCE SOP ${i + 1}: ${m.title} ---\n${m.markdown}`).join("\n\n");
     const base = input.base ? `CURRENT MASTER (update this):\n# ${input.base.title}\n${input.base.markdown}\n\n` : "";
-    const res = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [{ role: "user", parts: [{ text: MERGE_PROMPT }, { text: `TOPIC: ${input.topic}\n\n${base}${sources}`.slice(0, 120000) }] }],
-      config: { responseMimeType: "application/json", temperature: 0.1, thinkingConfig: { thinkingBudget: 4096 } },
+    const p = await llmJson<MergedSop>({
+      tier: "smart",
+      maxTokens: 12000,
+      timeoutMs: 150000,
+      system: MERGE_PROMPT,
+      prompt: `TOPIC: ${input.topic}\n\n${base}${sources}`.slice(0, 120000),
     });
-    const p = JSON.parse((res.text || "").trim()) as MergedSop;
     if (!p.title || !Array.isArray(p.steps) || p.steps.length === 0) return null;
     const list = (v: unknown): string[] => (Array.isArray(v) ? v.map((x) => noDash(String(x))).filter(Boolean) : []);
     return {
@@ -131,7 +119,7 @@ export async function mergeSopsAction(input: MergeInput): Promise<MergedSop | nu
       change_summary: noDash(String(p.change_summary || "Updated.")),
     };
   } catch (err) {
-    console.warn("[made. desk] SOP merge failed:", err);
+    console.warn("[made. desk] SOP merge failed:", explainAiError(err));
     return null;
   }
 }

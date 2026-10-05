@@ -1,6 +1,6 @@
 "use server";
 
-import { GoogleGenAI } from "@google/genai";
+import { llm, aiProvider, explainAiError } from "@/lib/ai/llm";
 import type { Playbook, Client, Capture, NextAction, ActionPriority, MasterSop, Product } from "@/lib/data/types";
 import { blocksToMarkdown, productToMarkdown } from "@/lib/data/text";
 
@@ -139,9 +139,8 @@ ${capturesContext}
 === STUDIO NEXT ACTIONS ===
 ${actionsContext}`;
 
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 
-    if (!apiKey) {
+    if (aiProvider() === "none") {
       // Deterministic fallback
       const relevantPlaybook = playbooks.find((p) =>
         userPrompt.toLowerCase().includes(p.category) ||
@@ -174,40 +173,18 @@ ${actionsContext}`;
       };
     }
 
-    const ai = new GoogleGenAI({ apiKey });
-
-    const contents: any[] = [
-      {
-        role: "user",
-        parts: [{ text: systemPrompt }],
-      },
-      {
-        role: "model",
-        parts: [{ text: "Understood. We are the made. desk studio assistant. We will strictly answer from our studio's playbooks, client workspaces, captures, and next actions without using em dashes or marketing fluff." }],
-      },
-    ];
-
-    for (const msg of history.slice(-6)) {
-      contents.push({
-        role: msg.role === "assistant" ? "model" : "user",
-        parts: [{ text: msg.content }],
-      });
-    }
-
-    contents.push({
-      role: "user",
-      parts: [{ text: userPrompt }],
+    const convo = history
+      .slice(-6)
+      .map((m) => `${m.role === "assistant" ? "Assistant" : "Founder"}: ${m.content}`)
+      .join("\n\n");
+    const answer = await llm({
+      tier: "fast",
+      maxTokens: 3000,
+      system: systemPrompt,
+      prompt: `${convo ? `Conversation so far:\n${convo}\n\n` : ""}Founder: ${userPrompt}\n\nAnswer as the studio assistant.`,
     });
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents,
-      config: {
-        temperature: 0.2,
-      },
-    });
-
-    let outputText = response.text || "We could not generate a response. Please check our studio records.";
+    let outputText = answer || "We could not generate a response. Please check our studio records.";
     outputText = outputText.replace(/—/g, ", ").replace(/–/g, "-");
 
     // Detect citations
@@ -258,7 +235,7 @@ ${actionsContext}`;
   } catch (error) {
     console.error("Error in askAssistantAction:", error);
     return {
-      content: "An error occurred while querying the studio assistant. Please verify our network connection.",
+      content: `The studio assistant could not answer: ${explainAiError(error)}`,
       citedSources: [],
       error: error instanceof Error ? error.message : "Unknown error",
     };

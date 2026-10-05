@@ -1,6 +1,6 @@
 "use server";
 
-import { GoogleGenAI } from "@google/genai";
+import { llmJson, aiProvider, explainAiError } from "@/lib/ai/llm";
 import type { PlaybookCategory, Region } from "@/lib/data/types";
 
 export interface GeneratedSop {
@@ -50,26 +50,15 @@ export async function generateSopAction(input: {
   summary?: string;
   sourceUrl?: string;
 }): Promise<GeneratedSop | null> {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-  if (!apiKey || !input.transcript.trim()) return null;
+  if (aiProvider() === "none" || !input.transcript.trim()) return null;
 
   try {
-    const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { text: SOP_PROMPT },
-            { text: `SOURCE URL: ${input.sourceUrl || "none"}\n\nSOURCE MATERIAL:\n"""\n${input.transcript.slice(0, 60000)}\n"""` },
-          ],
-        },
-      ],
-      config: { responseMimeType: "application/json", temperature: 0.1, thinkingConfig: { thinkingBudget: 2048 } },
+    const parsed = await llmJson<GeneratedSop>({
+      tier: "smart",
+      maxTokens: 8000,
+      system: SOP_PROMPT,
+      prompt: `SOURCE URL: ${input.sourceUrl || "none"}\n\nSOURCE MATERIAL:\n"""\n${input.transcript.slice(0, 60000)}\n"""`,
     });
-
-    const parsed = JSON.parse((response.text || "").trim()) as GeneratedSop;
     if (!parsed.title || !Array.isArray(parsed.steps) || parsed.steps.length === 0) return null;
 
     const list = (v: unknown): string[] => (Array.isArray(v) ? v.map((x) => noDash(String(x))).filter(Boolean) : []);
@@ -90,7 +79,7 @@ export async function generateSopAction(input: {
       not_covered: list(parsed.not_covered),
     };
   } catch (err) {
-    console.warn("[made. desk] SOP generation failed:", err);
+    console.warn("[made. desk] SOP generation failed:", explainAiError(err));
     return null;
   }
 }

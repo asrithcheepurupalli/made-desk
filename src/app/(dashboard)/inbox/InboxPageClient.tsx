@@ -36,7 +36,7 @@ export function InboxPageClient() {
               Capture Inbox
             </h1>
             <p className="font-sans text-xs text-[#7c7770] mt-1">
-              Dump reels, video transcripts, and tactical notes here. Gemini extracts actionable insights and populates Next Actions.
+              Dump reels, video transcripts, and tactical notes here. The AI extracts actionable insights and populates Next Actions.
             </p>
           </div>
 
@@ -77,7 +77,7 @@ export function InboxPageClient() {
               Inbox is Empty
             </h4>
             <p className="font-sans text-xs text-[#7c7770] max-w-md mx-auto">
-              Paste your first reel transcript, voice note, or research link above. Gemini will parse it into operational SOPs and next steps.
+              Paste your first reel transcript, voice note, or research link above. The AI will parse it into operational SOPs and next steps.
             </p>
           </div>
         ) : (
