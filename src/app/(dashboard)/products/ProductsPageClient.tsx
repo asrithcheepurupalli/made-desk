@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Rocket, Plus, Search, ArrowUpRight, Code2, Pencil } from "lucide-react";
+import { Rocket, Plus, Search, ArrowUpRight, Code2, Pencil, RefreshCw, AlertTriangle } from "lucide-react";
 import { useStoreQuery } from "@/lib/store/useStore";
 import { listProducts, ensureProductSeed } from "@/lib/data/products";
 import { PageLoading } from "@/components/PageLoading";
+import { runProductSync, getSyncReview, ignoreSyncItem, addFoundProduct, removeGoneProduct, maybeRunProductSync, PRODUCT_SYNC_EVENT, type SyncReview } from "@/lib/data/productSync";
 import { ProductForm } from "./ProductForm";
 import type { Product, ProductOwner, ProductStatus } from "@/lib/data/types";
 
@@ -89,6 +90,97 @@ function Card({ p, onEdit }: { p: Product; onEdit: () => void }) {
   );
 }
 
+function SyncPanel() {
+  const [review, setReview] = useState<SyncReview | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    const load = () => setReview(getSyncReview());
+    load();
+    window.addEventListener(PRODUCT_SYNC_EVENT, load);
+    return () => window.removeEventListener(PRODUCT_SYNC_EVENT, load);
+  }, []);
+
+  const check = async () => {
+    setBusy(true);
+    setFailed(false);
+    try {
+      await runProductSync();
+    } catch {
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const when = review ? new Date(review.checkedAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : null;
+  const pending = review ? review.newOnSite.length + review.goneFromSite.length : 0;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-3 font-mono text-[11px] text-[#7c7770]">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={check}
+          className="inline-flex items-center gap-1.5 bg-white text-[#16130f] uppercase px-3 py-1.5 border-2 border-[#16130f] hover:bg-[#ede8df] disabled:opacity-50"
+        >
+          <RefreshCw className={`w-3 h-3 ${busy ? "animate-spin" : ""}`} /> {busy ? "Checking..." : "Check sites"}
+        </button>
+        <span>
+          {failed
+            ? "Could not reach the sites. Try again."
+            : review
+              ? review.complete
+                ? `Checked ${when}. Links checked, sites compared${review.applied ? `, ${review.applied} status${review.applied > 1 ? "es" : ""} updated` : ""}.`
+                : `Checked ${when}. Links checked, but the sites could not be read, so new and removed work was not compared.`
+              : "Not checked yet. It runs by itself once a day."}
+        </span>
+      </div>
+
+      {pending > 0 && review && (
+        <div className="border-2 border-[#c8102e] bg-[#fbe8eb] p-4 space-y-3">
+          <p className="flex items-center gap-2 font-mono text-[11px] font-bold uppercase text-[#c8102e]">
+            <AlertTriangle className="w-4 h-4" /> {pending} to review: your sites changed
+          </p>
+          {review.goneFromSite.map((g) => (
+            <div key={g.id} className="flex flex-wrap items-center justify-between gap-3 bg-white border border-[#16130f] p-3">
+              <p className="font-sans text-xs text-[#16130f]">
+                <strong>{g.name}</strong> is no longer on your site. Remove it from the Hall?
+              </p>
+              <div className="flex gap-2">
+                <button onClick={() => removeGoneProduct(g.id)} className="bg-[#c8102e] text-white font-mono text-[10px] uppercase px-3 py-1.5 border-2 border-[#16130f]">
+                  Remove
+                </button>
+                <button onClick={() => ignoreSyncItem(g.id)} className="bg-white font-mono text-[10px] uppercase px-3 py-1.5 border-2 border-[#16130f]">
+                  Keep
+                </button>
+              </div>
+            </div>
+          ))}
+          {review.newOnSite.map((n) => (
+            <div key={n.url} className="flex flex-wrap items-center justify-between gap-3 bg-white border border-[#16130f] p-3">
+              <p className="font-sans text-xs text-[#16130f] min-w-0">
+                <strong>{n.name}</strong> is on your site ({n.foundOn}) but not in the Hall.
+                <span className="block font-mono text-[10px] text-[#7c7770] truncate">{n.url}</span>
+              </p>
+              <div className="flex gap-2 shrink-0">
+                <button onClick={() => addFoundProduct(n)} className="bg-[#16130f] text-[#f6f3ee] font-mono text-[10px] uppercase px-3 py-1.5 border-2 border-[#16130f]">
+                  Add
+                </button>
+                <button onClick={() => ignoreSyncItem(n.url)} className="bg-white font-mono text-[10px] uppercase px-3 py-1.5 border-2 border-[#16130f]">
+                  Ignore
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ProductsPageClient() {
   const products = useStoreQuery(listProducts);
   const [owner, setOwner] = useState<"all" | ProductOwner>("all");
@@ -98,7 +190,7 @@ export function ProductsPageClient() {
 
   // First visit: load the researched products (a no-op once they exist)
   useEffect(() => {
-    ensureProductSeed();
+    ensureProductSeed().then(() => maybeRunProductSync());
   }, []);
 
   const filtered = useMemo(() => {
@@ -147,6 +239,8 @@ export function ProductsPageClient() {
           ))}
         </div>
       </div>
+
+      <SyncPanel />
 
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">

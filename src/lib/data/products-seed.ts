@@ -1,12 +1,17 @@
 import type { Product } from "./types";
 
 /*
- * Researched 2026-10-01 from made-by-ac.com, asrithcheepurupalli.tech, GitHub and our own notes.
+ * Researched 2026-10-01, re-checked against the live sites 2026-10-05 from made-by-ac.com, asrithcheepurupalli.tech, GitHub and our own notes.
  * LinkedIn was checked too: its Projects, Featured and Experience sections are empty.
+ * Somaa was a paying-client claim that no longer holds (they declined the price). It is gone from the
+ * site and from here, replaced by Aavira, our own study. Never list it as a client.
  * Statuses reflect live checks on that date. Edit entries in the Hall of Products tab.
  */
-export const PRODUCT_SEED_VERSION = 1;
-export const PRODUCT_CHECKED_AT = "2026-10-01";
+export const PRODUCT_SEED_VERSION = 2;
+export const PRODUCT_CHECKED_AT = "2026-10-05";
+
+/** Seeded entries that must be removed from existing browsers (retracted claims, renamed work). */
+export const REMOVED_PRODUCT_IDS = ["somaa"];
 
 export const SEED_PRODUCTS: Array<Omit<Product, "created_at" | "updated_at" | "seed_version" | "edited" | "hidden" | "checked_at">> = [
   {
@@ -387,25 +392,6 @@ export const SEED_PRODUCTS: Array<Omit<Product, "created_at" | "updated_at" | "s
     "image": "/products/tideline.jpg"
   },
   {
-    "id": "somaa",
-    "name": "Somaa",
-    "owner": "made",
-    "type": "Client build",
-    "status": "live",
-    "url": "https://somaa.made-by-ac.com",
-    "repo": "",
-    "tagline": "A restobar that remembers you.",
-    "description": "An AI-powered dining experience for a coastal-Andhra restobar and live-music venue in Visakhapatnam: per-table QR ordering, guest recognition and a feedback loop. Our featured case study.",
-    "tags": [
-      "restaurant",
-      "QR ordering",
-      "AI"
-    ],
-    "source": "made-by-ac.com",
-    "note": "",
-    "image": "/products/somaa.jpg"
-  },
-  {
     "id": "ramachandra-ortho",
     "name": "Ramachandra Ortho Care",
     "owner": "made",
@@ -413,8 +399,8 @@ export const SEED_PRODUCTS: Array<Omit<Product, "created_at" | "updated_at" | "s
     "status": "live",
     "url": "https://rcorthocare.made-by-ac.com",
     "repo": "https://github.com/asrithcheepurupalli/ramachandra-ortho",
-    "tagline": "Orthopaedic clinic site with WhatsApp booking.",
-    "description": "Appointment site, WhatsApp booking bot and clinic admin for an orthopaedic clinic in Visakhapatnam, with deposits confirmed by webhook.",
+    "tagline": "A clinic where the visit starts before the phone rings.",
+    "description": "Clinic booking and a WhatsApp bot for an orthopaedic clinic in Visakhapatnam: online booking, deposits confirmed by webhook, a live front-desk queue and clinic admin. Our featured case study at made-by-ac.com/work/ramachandra-ortho.",
     "tags": [
       "healthcare",
       "booking",
@@ -432,7 +418,7 @@ export const SEED_PRODUCTS: Array<Omit<Product, "created_at" | "updated_at" | "s
     "status": "live",
     "url": "https://www.made-by-ac.com/work#/work/innovolt",
     "repo": "",
-    "tagline": "EV marketplace campaigns.",
+    "tagline": "Your vehicle, your price.",
     "description": "Campaign design for a commercial EV marketplace, including the Bengaluru fleet solutions campaign.",
     "tags": [
       "campaign",
@@ -928,5 +914,152 @@ export const SEED_PRODUCTS: Array<Omit<Product, "created_at" | "updated_at" | "s
     "source": "asrithcheepurupalli.tech, GitHub",
     "note": "",
     "image": ""
+  },
+  {
+    "id": "aavira",
+    "name": "Aavira",
+    "owner": "made",
+    "type": "Concept study",
+    "status": "live",
+    "url": "https://www.made-by-ac.com/work/aavira",
+    "repo": "",
+    "tagline": "A guest platform that gives every waiter more time for the guests.",
+    "description": "Scan, ask the chef, order together and watch the kitchen react. A restaurant ordering platform with a working phone prototype and live kitchen, waiter and owner views.",
+    "tags": [
+      "restaurant",
+      "QR ordering",
+      "AI host"
+    ],
+    "source": "made-by-ac.com",
+    "note": "Our own flagship study, not a client job.",
+    "image": "/products/aavira.jpg"
+  },
+  {
+    "id": "aavira-site",
+    "name": "Aavira restaurant website",
+    "owner": "made",
+    "type": "Concept study",
+    "status": "live",
+    "url": "https://www.made-by-ac.com/aavira",
+    "repo": "",
+    "tagline": "A concept restaurant website.",
+    "description": "A standalone concept site for the same fictional coastal restaurant: intro, parallax hero, signature dishes and a pinned reel. Our own concept, not for a client.",
+    "tags": [
+      "restaurant",
+      "website",
+      "concept"
+    ],
+    "source": "made-by-ac.com",
+    "note": "Our own concept, not a client job.",
+    "image": "/products/aavira-site.jpg"
+  },
+  {
+    "id": "teardown",
+    "name": "Free landing page teardown",
+    "owner": "made",
+    "type": "Tool",
+    "status": "live",
+    "url": "https://www.made-by-ac.com/teardown",
+    "repo": "",
+    "tagline": "Watch us tear a page apart.",
+    "description": "Tap the red marks on a sample landing page to hear what we would fix, then flip it into the version we would build.",
+    "tags": [
+      "interactive",
+      "landing page"
+    ],
+    "source": "made-by-ac.com",
+    "note": "",
+    "image": "/products/teardown.jpg"
+  },
+  {
+    "id": "made-live",
+    "name": "made. live",
+    "owner": "made",
+    "type": "Tool",
+    "status": "live",
+    "url": "https://www.made-by-ac.com/live",
+    "repo": "",
+    "tagline": "Type it. Watch it become a brand.",
+    "description": "Type a name and a vibe and a palette, a type pairing and a voice appear in a blink. A taste of what made. table does in full.",
+    "tags": [
+      "interactive",
+      "brand",
+      "AI"
+    ],
+    "source": "made-by-ac.com",
+    "note": "",
+    "image": "/products/made-live.jpg"
+  },
+  {
+    "id": "worth",
+    "name": "What design is worth",
+    "owner": "made",
+    "type": "Tool",
+    "status": "live",
+    "url": "https://www.made-by-ac.com/worth",
+    "repo": "",
+    "tagline": "Design is not a cost. Here is the maths.",
+    "description": "Slide your own numbers and see the return from a clearer funnel, a faster page and more trust. The uplift is kept deliberately conservative.",
+    "tags": [
+      "interactive",
+      "ROI"
+    ],
+    "source": "made-by-ac.com",
+    "note": "",
+    "image": "/products/worth.jpg"
+  },
+  {
+    "id": "laws",
+    "name": "The laws we design by",
+    "owner": "made",
+    "type": "Tool",
+    "status": "live",
+    "url": "https://www.made-by-ac.com/laws",
+    "repo": "",
+    "tagline": "Good design obeys laws.",
+    "description": "Thirty UX laws you can feel, not just read, with the seven we live by as live demos. Credit to lawsofux.com.",
+    "tags": [
+      "UX",
+      "interactive"
+    ],
+    "source": "made-by-ac.com",
+    "note": "",
+    "image": "/products/laws.jpg"
+  },
+  {
+    "id": "system",
+    "name": "The living system",
+    "owner": "made",
+    "type": "Tool",
+    "status": "live",
+    "url": "https://www.made-by-ac.com/system",
+    "repo": "",
+    "tagline": "Built on almost nothing.",
+    "description": "Four colours, three fonts, one grid. Move one value and everything stays coherent, because nothing was hand-placed.",
+    "tags": [
+      "design system",
+      "interactive"
+    ],
+    "source": "made-by-ac.com",
+    "note": "",
+    "image": "/products/system.jpg"
+  },
+  {
+    "id": "motion",
+    "name": "The motion index",
+    "owner": "made",
+    "type": "Tool",
+    "status": "live",
+    "url": "https://www.made-by-ac.com/motion",
+    "repo": "",
+    "tagline": "Motion with manners.",
+    "description": "Six moves, each live and explained. The curve a thing moves on is the difference between mechanical and alive.",
+    "tags": [
+      "motion",
+      "interactive"
+    ],
+    "source": "made-by-ac.com",
+    "note": "",
+    "image": "/products/motion.jpg"
   }
 ];

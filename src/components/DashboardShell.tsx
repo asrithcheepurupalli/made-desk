@@ -15,7 +15,11 @@ export function DashboardShell({ children }: DashboardShellProps) {
   React.useEffect(() => {
     requestPersistentStorage();
     // Catch up: merge any new overlapping SOPs (cheap no-op when nothing changed)
-    import("@/lib/data/products").then((m) => m.ensureProductSeed()).catch(() => {});
+    import("@/lib/data/products")
+      .then((m) => m.ensureProductSeed())
+      .then(() => import("@/lib/data/productSync"))
+      .then((m) => setTimeout(() => m.maybeRunProductSync(), 8000))
+      .catch(() => {});
     import("@/lib/masters/sync").then((m) => m.scheduleMasterSync(2500)).catch(() => {});
   }, []);
 

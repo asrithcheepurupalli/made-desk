@@ -1,5 +1,5 @@
 import { readJsonFile, writeJsonFile } from "@/lib/supabase/filestore";
-import { SEED_PRODUCTS, PRODUCT_SEED_VERSION, PRODUCT_CHECKED_AT } from "./products-seed";
+import { SEED_PRODUCTS, PRODUCT_SEED_VERSION, PRODUCT_CHECKED_AT, REMOVED_PRODUCT_IDS } from "./products-seed";
 import type { Product } from "./types";
 
 const FILENAME = "products.json";
@@ -15,10 +15,17 @@ export async function listProducts(): Promise<Product[]> {
  * edited when the seed list is updated. Anything edited or added by hand is left alone.
  */
 export async function ensureProductSeed(): Promise<void> {
-  const items = await readJsonFile<Product[]>(FILENAME, []);
-  const byId = new Map(items.map((p) => [p.id, p]));
+  let items = await readJsonFile<Product[]>(FILENAME, []);
   const now = new Date().toISOString();
   let changed = false;
+
+  // Retracted or renamed entries are removed even if edited: they are wrong, not just stale
+  const kept = items.filter((p) => !REMOVED_PRODUCT_IDS.includes(p.id));
+  if (kept.length !== items.length) {
+    items = kept;
+    changed = true;
+  }
+  const byId = new Map(items.map((p) => [p.id, p]));
 
   for (const seed of SEED_PRODUCTS) {
     const cur = byId.get(seed.id);

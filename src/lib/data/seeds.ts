@@ -222,7 +222,7 @@ export const SEED_CLIENTS: Client[] = [
       {
         id: "b1",
         type: "paragraph",
-        content: [{ type: "text", text: "High-end dining collective launching in Downtown Dubai and DIFC. Wants bespoke Somaa-caliber digital menus with dark/light dynamic theme matching their interior lighting." }],
+        content: [{ type: "text", text: "High-end dining collective launching in Downtown Dubai and DIFC. Wants bespoke digital menus with dark/light dynamic theme matching their interior lighting." }],
       },
     ],
     tags: ["dubai", "hospitality", "qr-platform", "active-onboarding"],
