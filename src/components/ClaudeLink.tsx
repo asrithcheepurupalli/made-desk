@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { getLinkState, linkFolder, reconnect, startAutoSync, unlink, type LinkState } from "@/lib/store/diskSync";
+import { backupNow, getLinkState, linkFolder, reconnect, startAutoSync, unlink, type LinkState } from "@/lib/store/diskSync";
 
 function ago(ts?: number) {
   if (!ts) return "not yet";
@@ -73,9 +73,15 @@ export function ClaudeLink() {
         Synced {ago(state.lastSync)} to /{state.folder}
         {state.error ? <span className="text-[#c8102e]"> ({state.error})</span> : null}
       </p>
-      <button type="button" onClick={() => run(unlink)} className="text-[10px] font-mono underline text-[#7c7770]">
-        Unlink
-      </button>
+      <p className="text-[10px] font-mono text-[#7c7770] leading-snug">Backup {state.lastBackup ? `${ago(state.lastBackup)} to /${state.folder}/backups` : "not yet"}</p>
+      <div className="flex gap-3">
+        <button type="button" disabled={busy} onClick={() => run(backupNow)} className="text-[10px] font-mono underline text-[#7c7770] disabled:opacity-50">
+          Back up now
+        </button>
+        <button type="button" onClick={() => run(unlink)} className="text-[10px] font-mono underline text-[#7c7770]">
+          Unlink
+        </button>
+      </div>
     </div>
   );
 }
