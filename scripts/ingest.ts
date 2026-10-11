@@ -13,7 +13,7 @@ import { buildSopBlocks, buildBasicBlocks } from "../src/lib/data/sopBlocks";
 import { explainAiError } from "../src/lib/ai/llm";
 
 const urls = process.argv.slice(2);
-const OUT = path.join(os.homedir(), "Desktop", "made-desk-ingest.json");
+const OUT = path.join(os.homedir(), "Desktop", `made-desk-ingest-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.json`);
 const shortcode = (u: string) => u.match(/\/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/)?.[1] || u;
 const readJson = (f: string): any[] => { try { return JSON.parse(fs.readFileSync(path.join(process.cwd(), ".data", f), "utf-8")); } catch { return []; } };
 

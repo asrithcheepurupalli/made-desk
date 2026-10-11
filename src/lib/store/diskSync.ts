@@ -15,7 +15,7 @@ const HANDLE_KEY = "dir";
 const LAST_SYNC_KEY = "made-desk:last-disk-sync";
 const LAST_BACKUP_KEY = "made-desk:last-disk-backup";
 const BACKUP_DIR = "backups";
-const BACKUP_KEEP = 30;
+const ARCHIVE_FILE = "made-desk-archive-all-time.json";
 const BACKUP_EVERY_MS = 10 * 60 * 1000;
 const DAILY_RE = /^made-desk-backup-\d{4}-\d{2}-\d{2}\.json$/;
 
@@ -132,9 +132,33 @@ async function countRows(sub: FileSystemDirectoryHandle, name: string): Promise<
 }
 
 /**
- * A full, importable copy (screenshots included) in <folder>/backups/, one file per day, newest 30 kept.
- * If the store suddenly holds under half of what the last backup had, it is written to a separate
- * "-SHRUNK-" file that is never pruned, so a bad state cannot replace a good day.
+ * Adds every row to <folder>/backups/made-desk-archive-all-time.json, keyed by id. Rows are only ever
+ * added or updated, never removed, so anything you once had (even if you later delete it in the app)
+ * stays on disk.
+ */
+async function updateArchive(sub: FileSystemDirectoryHandle, data: Record<string, unknown[]>): Promise<void> {
+  let archive: Record<string, any[]> = {};
+  try {
+    const parsed = JSON.parse(await (await (await sub.getFileHandle(ARCHIVE_FILE)).getFile()).text());
+    if (parsed?.app === "made-desk" && parsed.data) archive = parsed.data;
+  } catch {}
+  for (const name of STORE_FILES) {
+    const rows = data[name] as any[];
+    if (!Array.isArray(rows) || rows.length === 0) continue;
+    const merged = new Map<unknown, any>((archive[name] ?? []).map((r, i) => [r?.id ?? `__${i}`, r]));
+    rows.forEach((r, i) => merged.set(r?.id ?? `${name}-${i}`, r));
+    archive[name] = [...merged.values()];
+  }
+  const handle = await sub.getFileHandle(ARCHIVE_FILE, { create: true });
+  const w = await handle.createWritable();
+  await w.write(JSON.stringify({ app: "made-desk", version: 1, kind: "archive", exported_at: new Date().toISOString(), data: archive }));
+  await w.close();
+}
+
+/**
+ * A full, importable copy (screenshots included) in <folder>/backups/, one file per day, none ever
+ * deleted. If the store suddenly holds under half of what the last backup had, it is written to a
+ * separate "-SHRUNK-" file so a bad state cannot replace a good day.
  */
 export async function writeBackup(dir: FileSystemDirectoryHandle): Promise<{ file: string; rows: number }> {
   const data: Record<string, unknown[]> = {};
@@ -156,10 +180,7 @@ export async function writeBackup(dir: FileSystemDirectoryHandle): Promise<{ fil
   const w = await handle.createWritable();
   await w.write(JSON.stringify({ app: "made-desk", version: 1, exported_at: now.toISOString(), data }));
   await w.close();
-  if (!shrunk) {
-    const daily = (await listBackups(sub)).filter((n) => DAILY_RE.test(n));
-    for (const old of daily.slice(0, Math.max(0, daily.length - BACKUP_KEEP))) await sub.removeEntry(old).catch(() => {});
-  }
+  await updateArchive(sub, data);
   localStorage.setItem(LAST_BACKUP_KEY, String(Date.now()));
   return { file, rows };
 }
