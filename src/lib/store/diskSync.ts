@@ -16,7 +16,7 @@ const LAST_SYNC_KEY = "made-desk:last-disk-sync";
 const LAST_BACKUP_KEY = "made-desk:last-disk-backup";
 const BACKUP_DIR = "backups";
 const ARCHIVE_FILE = "made-desk-archive-all-time.json";
-const BACKUP_EVERY_MS = 10 * 60 * 1000;
+const BACKUP_EVERY_MS = 2 * 60 * 1000;
 const DAILY_RE = /^made-desk-backup-\d{4}-\d{2}-\d{2}\.json$/;
 
 export type LinkState = {
@@ -209,10 +209,18 @@ export async function restoreFromFolder(dir: FileSystemDirectoryHandle): Promise
   return importBackup(blob);
 }
 
+let trailing: ReturnType<typeof setTimeout> | undefined;
+
 async function maybeBackup(dir: FileSystemDirectoryHandle, force = false): Promise<void> {
   const last = Number(localStorage.getItem(LAST_BACKUP_KEY)) || 0;
   const sameDay = last > 0 && new Date(last).toDateString() === new Date().toDateString();
-  if (!force && sameDay && Date.now() - last < BACKUP_EVERY_MS) return;
+  const wait = BACKUP_EVERY_MS - (Date.now() - last);
+  if (!force && sameDay && wait > 0) {
+    // Too soon: make sure the very last change still gets backed up once the window ends.
+    clearTimeout(trailing);
+    trailing = setTimeout(() => void backupNow(), wait + 500);
+    return;
+  }
   if (await storeIsEmpty()) return;
   await writeBackup(dir);
 }
