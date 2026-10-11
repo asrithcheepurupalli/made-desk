@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { GoogleGenAI } from "@google/genai";
 import { llm, aiProvider } from "@/lib/ai/llm";
@@ -336,15 +337,42 @@ async function getWhisperPath(): Promise<string | null> {
   return execFileAsync("whisper", ["--help"], { timeout: 8000 }).then(() => "whisper", () => null);
 }
 
+/** whisper.cpp (brew install whisper-cpp) plus a ggml model in ~/.cache/whisper-cpp. No Python needed. */
+async function getWhisperCpp(): Promise<{ bin: string; model: string } | null> {
+  const bin = await findBinary("whisper-cli", [process.env.WHISPER_CPP_BIN || "", "/opt/homebrew/bin/whisper-cli", "/usr/local/bin/whisper-cli"].filter(Boolean));
+  if (!bin || bin === "whisper-cli") {
+    const ok = await execFileAsync("whisper-cli", ["--help"], { timeout: 5000 }).then(() => true, () => false);
+    if (!ok) return null;
+  }
+  const model = process.env.WHISPER_CPP_MODEL || path.join(os.homedir(), ".cache", "whisper-cpp", "ggml-base.bin");
+  try {
+    await fs.access(model);
+  } catch {
+    return null;
+  }
+  return { bin: bin || "whisper-cli", model };
+}
+
 async function transcribeSpeechLocally(videoPath: string, ffmpeg: string, dir: string): Promise<string> {
   const whisper = await getWhisperPath();
-  if (!whisper) return "";
+  const cpp = whisper ? null : await getWhisperCpp();
+  if (!whisper && !cpp) {
+    console.warn("[made. desk] No speech engine found (openai-whisper or whisper.cpp). Spoken words are NOT being transcribed.");
+    return "";
+  }
   const wav = path.join(dir, "speech.wav");
   try {
     await execFileAsync(ffmpeg, ["-y", "-i", videoPath, "-vn", "-ac", "1", "-ar", "16000", wav], { timeout: 60000 });
+    if (cpp) {
+      const { stdout } = await execFileAsync(cpp.bin, ["-m", cpp.model, "-f", wav, "-l", process.env.WHISPER_LANG || "auto", "-nt", "-np"], {
+        timeout: 5 * 60 * 1000,
+        maxBuffer: 20 * 1024 * 1024,
+      });
+      return stdout.replace(/\[BLANK_AUDIO\]/g, "").replace(/\s+/g, " ").trim();
+    }
     // "base" is ~5x faster than "small" with the same accuracy on clear speech (set WHISPER_MODEL=small for noisy audio)
     const model = process.env.WHISPER_MODEL || "base";
-    await execFileAsync(whisper, [wav, "--model", model, "--fp16", "False", "--output_format", "txt", "--output_dir", dir, "--verbose", "False"], {
+    await execFileAsync(whisper!, [wav, "--model", model, "--fp16", "False", "--output_format", "txt", "--output_dir", dir, "--verbose", "False"], {
       timeout: 5 * 60 * 1000,
       maxBuffer: 20 * 1024 * 1024,
     });
