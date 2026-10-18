@@ -2,6 +2,8 @@ import React from "react";
 import { LinksPageClient } from "./LinksPageClient";
 import { listTrackedLinks } from "@/lib/data/trackedLinks";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Tracked Links & Click Analytics: made. desk",
 };

@@ -2,6 +2,8 @@ import React from "react";
 import { VizagPageClient } from "./VizagPageClient";
 import { listTrackedLinks } from "@/lib/data/trackedLinks";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Vizag outreach: made. desk",
 };
