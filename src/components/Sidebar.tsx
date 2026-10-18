@@ -18,6 +18,7 @@ import {
   Plus,
   Send,
   ArrowUpRight,
+  Link2,
 } from "lucide-react";
 import { STUDIO } from "@/lib/brand";
 import { Wordmark } from "./Wordmark";
@@ -86,6 +87,12 @@ export function Sidebar({ onOpenQuickCapture, open = false, onClose }: SidebarPr
       icon: Rocket,
       shortcut: "8",
     },
+    {
+      href: "/links",
+      label: "Tracked Links",
+      icon: Link2,
+      shortcut: "0",
+    },
   ];
 
   useEffect(() => {
@@ -113,6 +120,7 @@ export function Sidebar({ onOpenQuickCapture, open = false, onClose }: SidebarPr
       if (e.key === "7") router.push("/assistant");
       if (e.key === "8") router.push("/products");
       if (e.key === "9") router.push("/outreach");
+      if (e.key === "0") router.push("/links");
     }
 
     window.addEventListener("keydown", handleKeyDown);

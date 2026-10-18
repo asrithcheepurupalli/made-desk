@@ -91,6 +91,36 @@ drop policy if exists "assistant_messages service role only" on public.assistant
 create policy "assistant_messages service role only" on public.assistant_messages using (false) with check (false);
 
 
+-- 6. Tracked Links: short outbound links for outreach, with click analytics
+create table if not exists public.tracked_links (
+  id uuid primary key default gen_random_uuid(),
+  code text unique not null,
+  target_url text not null,
+  label text,
+  campaign text,                            -- e.g. 'vizag-restaurants' | 'vizag-clinics' | 'vizag-showrooms'
+  contact_name text,
+  contact_phone text,
+  click_count integer not null default 0,
+  last_clicked_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.tracked_links enable row level security;
+drop policy if exists "tracked_links service role only" on public.tracked_links;
+create policy "tracked_links service role only" on public.tracked_links using (false) with check (false);
+
+-- 7. Link Click Events: one row per click on a tracked link
+create table if not exists public.link_click_events (
+  id uuid primary key default gen_random_uuid(),
+  link_id uuid references public.tracked_links(id) on delete cascade,
+  clicked_at timestamptz not null default now(),
+  user_agent text,
+  referrer text
+);
+alter table public.link_click_events enable row level security;
+drop policy if exists "link_click_events service role only" on public.link_click_events;
+create policy "link_click_events service role only" on public.link_click_events using (false) with check (false);
+
 -- Migration for existing databases (safe to re-run)
 alter table public.captures add column if not exists screenshots jsonb not null default '[]'::jsonb;
 alter table public.captures add column if not exists duration_seconds integer;

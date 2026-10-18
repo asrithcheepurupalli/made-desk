@@ -168,3 +168,19 @@ export interface Product {
   created_at: string;
   updated_at: string;
 }
+
+/** One outbound short link we send to a lead, with click analytics attached. */
+export interface TrackedLink {
+  id: string;
+  code: string;
+  target_url: string;
+  label?: string;
+  /** e.g. 'vizag-restaurants' | 'vizag-clinics' | 'vizag-showrooms' */
+  campaign?: string;
+  contact_name?: string;
+  contact_phone?: string;
+  click_count: number;
+  last_clicked_at?: string;
+  created_at: string;
+  updated_at: string;
+}
