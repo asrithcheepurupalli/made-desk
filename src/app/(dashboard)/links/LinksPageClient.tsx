@@ -1,10 +1,8 @@
 "use client";
 
 import React from "react";
-import { useStoreQuery } from "@/lib/store/useStore";
-import { PageLoading } from "@/components/PageLoading";
-import { listTrackedLinks } from "@/lib/data/trackedLinks";
 import { Link2, MousePointerClick, Send, Clock, ExternalLink } from "lucide-react";
+import type { TrackedLink } from "@/lib/data/types";
 
 function timeAgo(iso?: string): string {
   if (!iso) return "Never";
@@ -18,9 +16,8 @@ function timeAgo(iso?: string): string {
   return `${days}d ago`;
 }
 
-export function LinksPageClient() {
-  const links = useStoreQuery(listTrackedLinks);
-  if (!links) return <PageLoading />;
+export function LinksPageClient({ initialLinks }: { initialLinks: TrackedLink[] }) {
+  const links = initialLinks;
 
   const totalClicks = links.reduce((sum, l) => sum + l.click_count, 0);
   const clickedCount = links.filter((l) => l.click_count > 0).length;

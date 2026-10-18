@@ -179,8 +179,12 @@ export interface TrackedLink {
   campaign?: string;
   contact_name?: string;
   contact_phone?: string;
+  /** The exact text to send this contact (WhatsApp etc.), tracked link already embedded */
+  message?: string;
   click_count: number;
   last_clicked_at?: string;
+  /** When we marked this as sent. Null/undefined means not sent yet. */
+  sent_at?: string;
   created_at: string;
   updated_at: string;
 }

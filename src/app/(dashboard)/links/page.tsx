@@ -1,10 +1,12 @@
 import React from "react";
 import { LinksPageClient } from "./LinksPageClient";
+import { listTrackedLinks } from "@/lib/data/trackedLinks";
 
 export const metadata = {
   title: "Tracked Links & Click Analytics: made. desk",
 };
 
-export default function Page() {
-  return <LinksPageClient />;
+export default async function Page() {
+  const links = await listTrackedLinks();
+  return <LinksPageClient initialLinks={links} />;
 }

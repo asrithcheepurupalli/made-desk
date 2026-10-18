@@ -76,6 +76,36 @@ export async function createTrackedLink(
   return link;
 }
 
+export async function updateTrackedLink(
+  id: string,
+  patch: Partial<Pick<TrackedLink, "message" | "label">> & { sent_at?: string | null }
+): Promise<TrackedLink | null> {
+  const now = new Date().toISOString();
+  const sb = supabaseAdmin();
+  if (sb) {
+    const { data, error } = await sb
+      .from("tracked_links")
+      .update({ ...patch, updated_at: now })
+      .eq("id", id)
+      .select()
+      .maybeSingle();
+    must({ error }, "tracked link update");
+    return (data as TrackedLink) ?? null;
+  }
+
+  const items = await listTrackedLinks();
+  const idx = items.findIndex((l) => l.id === id);
+  if (idx === -1) return null;
+  const { sent_at, ...rest } = patch;
+  items[idx] = { ...items[idx], ...rest, sent_at: sent_at ?? undefined, updated_at: now };
+  await writeJsonFile(FILENAME, items);
+  return items[idx];
+}
+
+export async function markSent(id: string, sent: boolean): Promise<TrackedLink | null> {
+  return updateTrackedLink(id, { sent_at: sent ? new Date().toISOString() : null });
+}
+
 export async function recordClick(
   linkId: string,
   event?: { userAgent?: string | null; referrer?: string | null }

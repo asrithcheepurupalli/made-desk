@@ -19,6 +19,7 @@ import {
   Send,
   ArrowUpRight,
   Link2,
+  MapPin,
 } from "lucide-react";
 import { STUDIO } from "@/lib/brand";
 import { Wordmark } from "./Wordmark";
@@ -92,6 +93,11 @@ export function Sidebar({ onOpenQuickCapture, open = false, onClose }: SidebarPr
       label: "Tracked Links",
       icon: Link2,
       shortcut: "0",
+    },
+    {
+      href: "/vizag",
+      label: "Vizag Outreach",
+      icon: MapPin,
     },
   ];
 
@@ -199,15 +205,17 @@ export function Sidebar({ onOpenQuickCapture, open = false, onClose }: SidebarPr
                   <Icon className={`w-4 h-4 ${isActive ? "text-[#c8102e]" : "text-[#16130f]"}`} />
                   <span>{item.label}</span>
                 </div>
-                <kbd
-                  className={`text-[9px] font-mono px-1 py-0.2 border ${
-                    isActive
-                      ? "border-white/30 text-white/70"
-                      : "border-[#16130f]/20 text-[#7c7770]"
-                  }`}
-                >
-                  {item.shortcut}
-                </kbd>
+                {item.shortcut && (
+                  <kbd
+                    className={`text-[9px] font-mono px-1 py-0.2 border ${
+                      isActive
+                        ? "border-white/30 text-white/70"
+                        : "border-[#16130f]/20 text-[#7c7770]"
+                    }`}
+                  >
+                    {item.shortcut}
+                  </kbd>
+                )}
               </Link>
             );
           })}

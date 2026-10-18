@@ -124,3 +124,5 @@ create policy "link_click_events service role only" on public.link_click_events 
 -- Migration for existing databases (safe to re-run)
 alter table public.captures add column if not exists screenshots jsonb not null default '[]'::jsonb;
 alter table public.captures add column if not exists duration_seconds integer;
+alter table public.tracked_links add column if not exists message text;
+alter table public.tracked_links add column if not exists sent_at timestamptz;
