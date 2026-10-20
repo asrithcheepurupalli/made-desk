@@ -9,7 +9,7 @@ export const metadata = {
 };
 
 export default async function Page() {
-  const links = await listTrackedLinks();
+  const links = await listTrackedLinks({ includeArchived: true });
   const vizagLinks = links.filter((l) => (l.campaign || "").startsWith("vizag-"));
   return <VizagPageClient links={vizagLinks} />;
 }

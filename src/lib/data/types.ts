@@ -185,6 +185,8 @@ export interface TrackedLink {
   last_clicked_at?: string;
   /** When we marked this as sent. Null/undefined means not sent yet. */
   sent_at?: string;
+  /** When this was archived (e.g. no WhatsApp account, dead lead). Hidden from the active board. */
+  archived_at?: string;
   created_at: string;
   updated_at: string;
 }

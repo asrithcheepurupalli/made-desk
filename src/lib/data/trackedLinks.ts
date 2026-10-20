@@ -13,19 +13,26 @@ export function generateCode(length = 7): string {
   return code;
 }
 
-export async function listTrackedLinks(filter?: { campaign?: string }): Promise<TrackedLink[]> {
+export async function listTrackedLinks(filter?: {
+  campaign?: string;
+  /** Default false: archived links (e.g. no WhatsApp account, dead lead) are hidden. */
+  includeArchived?: boolean;
+}): Promise<TrackedLink[]> {
   const sb = supabaseAdmin();
   if (sb) {
     let query = sb.from("tracked_links").select("*").order("created_at", { ascending: false });
     if (filter?.campaign) query = query.eq("campaign", filter.campaign);
+    if (!filter?.includeArchived) query = query.is("archived_at", null);
     const { data, error } = await query;
     must({ error }, "list tracked links");
     return (data ?? []) as TrackedLink[];
   }
 
   const items = await readJsonFile<TrackedLink[]>(FILENAME, []);
-  const sorted = [...items].sort((a, b) => b.created_at.localeCompare(a.created_at));
-  return filter?.campaign ? sorted.filter((l) => l.campaign === filter.campaign) : sorted;
+  let sorted = [...items].sort((a, b) => b.created_at.localeCompare(a.created_at));
+  if (filter?.campaign) sorted = sorted.filter((l) => l.campaign === filter.campaign);
+  if (!filter?.includeArchived) sorted = sorted.filter((l) => !l.archived_at);
+  return sorted;
 }
 
 export async function getTrackedLinkByCode(code: string): Promise<TrackedLink | null> {
@@ -41,7 +48,7 @@ export async function getTrackedLinkByCode(code: string): Promise<TrackedLink | 
     return (data as TrackedLink) ?? null;
   }
 
-  const items = await listTrackedLinks();
+  const items = await listTrackedLinks({ includeArchived: true });
   return items.find((l) => l.code === clean) ?? null;
 }
 
@@ -78,7 +85,10 @@ export async function createTrackedLink(
 
 export async function updateTrackedLink(
   id: string,
-  patch: Partial<Pick<TrackedLink, "message" | "label">> & { sent_at?: string | null }
+  patch: Partial<Pick<TrackedLink, "message" | "label">> & {
+    sent_at?: string | null;
+    archived_at?: string | null;
+  }
 ): Promise<TrackedLink | null> {
   const now = new Date().toISOString();
   const sb = supabaseAdmin();
@@ -93,17 +103,25 @@ export async function updateTrackedLink(
     return (data as TrackedLink) ?? null;
   }
 
-  const items = await listTrackedLinks();
+  const items = await listTrackedLinks({ includeArchived: true });
   const idx = items.findIndex((l) => l.id === id);
   if (idx === -1) return null;
-  const { sent_at, ...rest } = patch;
-  items[idx] = { ...items[idx], ...rest, sent_at: sent_at ?? undefined, updated_at: now };
+  const next: TrackedLink = { ...items[idx], updated_at: now };
+  if (patch.message !== undefined) next.message = patch.message;
+  if (patch.label !== undefined) next.label = patch.label;
+  if ("sent_at" in patch) next.sent_at = patch.sent_at ?? undefined;
+  if ("archived_at" in patch) next.archived_at = patch.archived_at ?? undefined;
+  items[idx] = next;
   await writeJsonFile(FILENAME, items);
   return items[idx];
 }
 
 export async function markSent(id: string, sent: boolean): Promise<TrackedLink | null> {
   return updateTrackedLink(id, { sent_at: sent ? new Date().toISOString() : null });
+}
+
+export async function markArchived(id: string, archived: boolean): Promise<TrackedLink | null> {
+  return updateTrackedLink(id, { archived_at: archived ? new Date().toISOString() : null });
 }
 
 export async function recordClick(
