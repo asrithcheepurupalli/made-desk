@@ -6,11 +6,30 @@ import type { TrackedLink } from "@/lib/data/types";
 import { useToast } from "@/components/Toast";
 import { markSentAction, markArchivedAction } from "./actions";
 
-const SECTIONS: { campaign: string; label: string }[] = [
-  { campaign: "vizag-restaurants", label: "Restaurants & cafes" },
-  { campaign: "vizag-clinics", label: "Clinics & hospitals" },
-  { campaign: "vizag-showrooms", label: "Furniture & interior showrooms" },
+const REGIONS: { region: string; sections: { campaign: string; label: string }[] }[] = [
+  {
+    region: "Vizag",
+    sections: [
+      { campaign: "vizag-restaurants", label: "Restaurants & cafes" },
+      { campaign: "vizag-clinics", label: "Clinics & hospitals" },
+      { campaign: "vizag-showrooms", label: "Furniture & interior showrooms" },
+    ],
+  },
+  {
+    region: "Vijayawada & Guntur",
+    sections: [
+      { campaign: "ap-restaurants", label: "Restaurants & cafes" },
+      { campaign: "ap-clinics", label: "Clinics & hospitals" },
+      { campaign: "ap-showrooms", label: "Furniture & interior showrooms" },
+    ],
+  },
 ];
+
+const TIER_ORDER: Record<string, number> = { "Tier 1": 0, "Tier 2": 1, "Tier 3": 2 };
+function tierRank(tier?: string): number {
+  if (!tier) return 99;
+  return TIER_ORDER[tier] ?? (tier.startsWith("Tier 3") ? 2.5 : 99);
+}
 
 function waLink(phone: string | undefined, message: string | undefined): string {
   const digits = (phone || "").replace(/\D/g, "").replace(/^0+/, "");
@@ -53,9 +72,23 @@ function Row({ link, archivedView = false }: { link: TrackedLink; archivedView?:
     <div className={`border-2 border-[#16130f] bg-white p-4 space-y-3 ${sent && !archivedView ? "opacity-60" : ""}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="font-mono text-sm font-bold text-[#16130f]">{link.contact_name}</p>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <p className="font-mono text-sm font-bold text-[#16130f]">{link.contact_name}</p>
+            {link.tier && (
+              <span
+                className={`label px-1 py-0.5 border ${
+                  link.tier === "Tier 1"
+                    ? "bg-[#16130f] text-white border-[#16130f]"
+                    : "bg-white text-[#7c7770] border-[#16130f]/30"
+                }`}
+              >
+                {link.tier}
+              </span>
+            )}
+          </div>
           <p className="text-[10px] font-mono text-[#7c7770] mt-0.5">
             {link.contact_phone || "no phone"}
+            {link.location ? ` · ${link.location}` : ""}
             {link.click_count > 0 && (
               <span className="ml-2 inline-flex items-center gap-1 text-[#c8102e]">
                 <MousePointerClick className="w-3 h-3" /> clicked
@@ -130,10 +163,10 @@ export function VizagPageClient({ links }: { links: TrackedLink[] }) {
       <div className="border-b-2 border-[#16130f] pb-6">
         <div className="flex items-center gap-2">
           <MapPin className="w-5 h-5 text-[#c8102e]" />
-          <span className="label text-[#7c7770]">Local outreach / Vizag</span>
+          <span className="label text-[#7c7770]">Local outreach</span>
         </div>
         <h1 className="font-display font-semibold italic text-3xl md:text-4xl tracking-tight text-[#16130f] mt-1.5">
-          Vizag outreach
+          Local outreach
         </h1>
         <p className="font-sans text-xs text-[#7c7770] mt-2">
           Open each in WhatsApp, send, mark it sent. Clicked shows who actually opened the link. Archive a lead if they have no WhatsApp account, it drops out of this list without losing the work.
@@ -156,25 +189,40 @@ export function VizagPageClient({ links }: { links: TrackedLink[] }) {
         </div>
       </div>
 
-      {SECTIONS.map((section) => {
-        const rows = active
-          .filter((l) => l.campaign === section.campaign)
-          .sort((a, b) => (a.contact_name || "").localeCompare(b.contact_name || ""));
-        const sentCount = rows.filter((l) => l.sent_at).length;
-        if (rows.length === 0) return null;
+      {REGIONS.map((region) => {
+        const regionCampaigns = new Set(region.sections.map((s) => s.campaign));
+        const regionHasAny = active.some((l) => regionCampaigns.has(l.campaign || ""));
+        if (!regionHasAny) return null;
         return (
-          <div key={section.campaign} className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="font-mono text-sm font-bold uppercase tracking-wider text-[#16130f]">
-                {section.label}
-              </h2>
-              <span className="label text-[#7c7770]">{sentCount} / {rows.length} sent</span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {rows.map((link) => (
-                <Row key={link.id} link={link} />
-              ))}
-            </div>
+          <div key={region.region} className="space-y-6">
+            <h2 className="font-mono text-xs font-bold uppercase tracking-widest text-[#c8102e] border-b border-[#16130f]/20 pb-1">
+              {region.region}
+            </h2>
+            {region.sections.map((section) => {
+              const rows = active
+                .filter((l) => l.campaign === section.campaign)
+                .sort((a, b) => {
+                  const t = tierRank(a.tier) - tierRank(b.tier);
+                  return t !== 0 ? t : (a.contact_name || "").localeCompare(b.contact_name || "");
+                });
+              const sentCount = rows.filter((l) => l.sent_at).length;
+              if (rows.length === 0) return null;
+              return (
+                <div key={section.campaign} className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-[#16130f]">
+                      {section.label}
+                    </h3>
+                    <span className="label text-[#7c7770]">{sentCount} / {rows.length} sent</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {rows.map((link) => (
+                      <Row key={link.id} link={link} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         );
       })}

@@ -5,7 +5,7 @@ import { listTrackedLinks } from "@/lib/data/trackedLinks";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Vizag outreach: made. desk",
+  title: "Local outreach: made. desk",
 };
 
 export default async function Page() {

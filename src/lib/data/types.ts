@@ -179,6 +179,10 @@ export interface TrackedLink {
   campaign?: string;
   contact_name?: string;
   contact_phone?: string;
+  /** e.g. 'Tier 1' | 'Tier 2' | 'Tier 3', see src/tier-leads.mjs in made-crew-outreach */
+  tier?: string;
+  /** City/area the lead is in, e.g. 'Vijayawada' */
+  location?: string;
   /** The exact text to send this contact (WhatsApp etc.), tracked link already embedded */
   message?: string;
   click_count: number;

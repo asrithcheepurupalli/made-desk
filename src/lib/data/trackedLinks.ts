@@ -66,6 +66,8 @@ export async function createTrackedLink(
     campaign: input.campaign,
     contact_name: input.contact_name,
     contact_phone: input.contact_phone,
+    tier: input.tier,
+    location: input.location,
     click_count: 0,
     created_at: now,
     updated_at: now,
