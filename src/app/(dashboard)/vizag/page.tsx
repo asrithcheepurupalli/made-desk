@@ -10,6 +10,9 @@ export const metadata = {
 
 export default async function Page() {
   const links = await listTrackedLinks({ includeArchived: true });
-  const vizagLinks = links.filter((l) => (l.campaign || "").startsWith("vizag-"));
-  return <VizagPageClient links={vizagLinks} />;
+  const localOutreachLinks = links.filter((l) => {
+    const campaign = l.campaign || "";
+    return campaign.startsWith("vizag-") || campaign.startsWith("ap-");
+  });
+  return <VizagPageClient links={localOutreachLinks} />;
 }
