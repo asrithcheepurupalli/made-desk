@@ -6,9 +6,16 @@ import type { TrackedLink } from "@/lib/data/types";
 import { useToast } from "@/components/Toast";
 import { markSentAction, markArchivedAction } from "./actions";
 
-const REGIONS: { region: string; sections: { campaign: string; label: string }[] }[] = [
+type Town = {
+  town: string;
+  sections: { campaign: string; label: string }[];
+  /** Only count/show links whose location matches this, when a campaign is shared across towns */
+  location?: string;
+};
+
+const TOWNS: Town[] = [
   {
-    region: "Vizag",
+    town: "Vizag",
     sections: [
       { campaign: "vizag-restaurants", label: "Restaurants & cafes" },
       { campaign: "vizag-clinics", label: "Clinics & hospitals" },
@@ -16,7 +23,17 @@ const REGIONS: { region: string; sections: { campaign: string; label: string }[]
     ],
   },
   {
-    region: "Vijayawada & Guntur",
+    town: "Vijayawada",
+    location: "Vijayawada",
+    sections: [
+      { campaign: "ap-restaurants", label: "Restaurants & cafes" },
+      { campaign: "ap-clinics", label: "Clinics & hospitals" },
+      { campaign: "ap-showrooms", label: "Furniture & interior showrooms" },
+    ],
+  },
+  {
+    town: "Guntur",
+    location: "Guntur",
     sections: [
       { campaign: "ap-restaurants", label: "Restaurants & cafes" },
       { campaign: "ap-clinics", label: "Clinics & hospitals" },
@@ -24,6 +41,13 @@ const REGIONS: { region: string; sections: { campaign: string; label: string }[]
     ],
   },
 ];
+
+function belongsToTown(link: TrackedLink, town: Town): boolean {
+  const campaigns = new Set(town.sections.map((s) => s.campaign));
+  if (!campaigns.has(link.campaign || "")) return false;
+  if (town.location && link.location !== town.location) return false;
+  return true;
+}
 
 const TIER_ORDER: Record<string, number> = { "Tier 1": 0, "Tier 2": 1, "Tier 3": 2 };
 function tierRank(tier?: string): number {
@@ -158,6 +182,10 @@ export function VizagPageClient({ links }: { links: TrackedLink[] }) {
   const archived = links.filter((l) => l.archived_at);
   const totalSent = active.filter((l) => l.sent_at).length;
 
+  const townsWithData = TOWNS.filter((town) => active.some((l) => belongsToTown(l, town)));
+  const [activeTown, setActiveTown] = useState<string>(townsWithData[0]?.town || TOWNS[0].town);
+  const currentTown = townsWithData.find((t) => t.town === activeTown) || townsWithData[0];
+
   return (
     <div className="p-6 md:p-8 max-w-5xl w-full mx-auto space-y-8">
       <div className="border-b-2 border-[#16130f] pb-6">
@@ -189,43 +217,63 @@ export function VizagPageClient({ links }: { links: TrackedLink[] }) {
         </div>
       </div>
 
-      {REGIONS.map((region) => {
-        const regionCampaigns = new Set(region.sections.map((s) => s.campaign));
-        const regionHasAny = active.some((l) => regionCampaigns.has(l.campaign || ""));
-        if (!regionHasAny) return null;
-        return (
-          <div key={region.region} className="space-y-6">
+      {townsWithData.length > 1 && (
+        <div className="flex flex-wrap gap-2 border-b-2 border-[#16130f] pb-4">
+          {townsWithData.map((town) => {
+            const townActive = active.filter((l) => belongsToTown(l, town));
+            const isActive = town.town === currentTown?.town;
+            return (
+              <button
+                key={town.town}
+                type="button"
+                onClick={() => setActiveTown(town.town)}
+                className={`label px-4 py-2 border-2 border-[#16130f] ${
+                  isActive
+                    ? "bg-[#16130f] text-white shadow-[2px_2px_0px_#16130f]"
+                    : "bg-white text-[#16130f] hover:bg-[#ede8df]"
+                }`}
+              >
+                {town.town} ({townActive.length})
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {currentTown && (
+        <div className="space-y-6">
+          {townsWithData.length <= 1 && (
             <h2 className="font-mono text-xs font-bold uppercase tracking-widest text-[#c8102e] border-b border-[#16130f]/20 pb-1">
-              {region.region}
+              {currentTown.town}
             </h2>
-            {region.sections.map((section) => {
-              const rows = active
-                .filter((l) => l.campaign === section.campaign)
-                .sort((a, b) => {
-                  const t = tierRank(a.tier) - tierRank(b.tier);
-                  return t !== 0 ? t : (a.contact_name || "").localeCompare(b.contact_name || "");
-                });
-              const sentCount = rows.filter((l) => l.sent_at).length;
-              if (rows.length === 0) return null;
-              return (
-                <div key={section.campaign} className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-[#16130f]">
-                      {section.label}
-                    </h3>
-                    <span className="label text-[#7c7770]">{sentCount} / {rows.length} sent</span>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {rows.map((link) => (
-                      <Row key={link.id} link={link} />
-                    ))}
-                  </div>
+          )}
+          {currentTown.sections.map((section) => {
+            const rows = active
+              .filter((l) => belongsToTown(l, currentTown) && l.campaign === section.campaign)
+              .sort((a, b) => {
+                const t = tierRank(a.tier) - tierRank(b.tier);
+                return t !== 0 ? t : (a.contact_name || "").localeCompare(b.contact_name || "");
+              });
+            const sentCount = rows.filter((l) => l.sent_at).length;
+            if (rows.length === 0) return null;
+            return (
+              <div key={section.campaign} className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-[#16130f]">
+                    {section.label}
+                  </h3>
+                  <span className="label text-[#7c7770]">{sentCount} / {rows.length} sent</span>
                 </div>
-              );
-            })}
-          </div>
-        );
-      })}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {rows.map((link) => (
+                    <Row key={link.id} link={link} />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {showArchived && archived.length > 0 && (
         <div className="space-y-3 pt-4 border-t-2 border-[#16130f]">
